@@ -49,19 +49,21 @@ export default function AdminPage() {
 
   useEffect(() => {
     const session = sessionStorage.getItem("cyberai_admin");
-    if (session === "true") {
+    const savedPassword = sessionStorage.getItem("cyberai_admin_pw");
+    if (session === "true" && savedPassword) {
+      setPassword(savedPassword);
       setLoggedIn(true);
-      fetchKeys();
+      fetchKeys(savedPassword);
     }
     setChecking(false);
   }, []);
 
-  const fetchKeys = async () => {
+  const fetchKeys = async (pw?: string) => {
     try {
       const res = await fetch("/api/admin/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password: pw || password }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -83,6 +85,7 @@ export default function AdminPage() {
         setKeys(data.keys);
         setLoggedIn(true);
         sessionStorage.setItem("cyberai_admin", "true");
+        sessionStorage.setItem("cyberai_admin_pw", password);
       } else {
         setLoginError(true);
       }
@@ -94,6 +97,7 @@ export default function AdminPage() {
   const logout = () => {
     setLoggedIn(false);
     sessionStorage.removeItem("cyberai_admin");
+    sessionStorage.removeItem("cyberai_admin_pw");
     setPassword("");
   };
 
