@@ -16,6 +16,12 @@ const PAGE_LINKS = [
 ];
 
 const SCROLL_LINKS = ["Features", "Pricing", "FAQ"];
+const TOOL_LINKS = [
+  { href: "/tools/password-checker", label: "Password Checker" },
+  { href: "/challenges", label: "CTF" },
+  { href: "/sandbox", label: "Sandbox" },
+  { href: "/dark-web", label: "Dark Web" },
+];
 
 export function Nav() {
   const pathname = usePathname();
@@ -80,6 +86,18 @@ export function Nav() {
               ))}
             </>
           )}
+          {!isHome && (
+            <>
+              <span className="h-4 w-px bg-border" />
+              {TOOL_LINKS.map(item => (
+                <Link key={item.href} href={item.href}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </>
+          )}
         </nav>
 
         <div className="flex items-center gap-3">
@@ -91,7 +109,6 @@ export function Nav() {
               {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             )}
-            <Link href="/admin" className="hidden sm:flex text-xs text-muted-foreground hover:text-foreground transition-colors">Admin</Link>
           {loading ? null : user ? (
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">

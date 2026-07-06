@@ -12,7 +12,17 @@ const GEMINI_MODELS = [
   "gemini-1.5-flash",
 ];
 
-const GROQ_MODELS = ["llama-3.1-8b-instant"];
+const GROQ_MODELS = [
+  "llama-3.1-8b-instant",
+  "llama-3.3-70b-versatile",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "qwen/qwen3-32b",
+  "qwen/qwen3.6-27b",
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
+  "groq/compound",
+  "groq/compound-mini",
+];
 
 const SYSTEM_PROMPT = `You are CyberAI Tutor, a friendly and encouraging cybersecurity teacher for beginners.
 

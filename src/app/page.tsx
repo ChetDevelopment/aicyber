@@ -12,19 +12,19 @@ const FEATURES = [
   { icon: "M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418", title: "30+ Topics", desc: "From passwords and phishing to firewalls and zero-days — we cover everything a beginner needs to know." },
   { icon: "M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z", title: "Works Offline", desc: "Our local AI engine answers cybersecurity questions even without internet — no API key required." },
   { icon: "M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12", title: "Beginner Friendly", desc: "No prior knowledge needed. We start from zero and build up, one concept at a time, at your pace." },
-  { icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z", title: "Instant Responses", desc: "Get answers in milliseconds from our local engine, or tap into Gemini AI for cloud-powered depth." },
+  { icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z", title: "Instant Responses", desc: "Get answers in milliseconds from our local engine, or tap into cloud AI for deeper explanations." },
 ];
 
 const PRICING = [
   { name: "Free", price: "$0", period: "/forever", desc: "Everything you need to start learning cybersecurity.", features: ["Unlimited local AI queries", "30+ cybersecurity topics", "Multiple chat sessions", "Dark mode", "Works offline"], cta: "Start Learning", popular: false },
-  { name: "Gemini Boost", price: "Free", period: "", desc: "AI-powered responses from Google's Gemini models.", features: ["Everything in Free", "Gemini 2.5 Flash Lite", "Gemini 3.1 Flash Lite", "Gemini 3.5 Flash", "Choose your model", "Smarter responses"], cta: "Add API Key", popular: true },
+  { name: "Cloud Boost", price: "Free", period: "", desc: "AI-powered responses from our cloud models.", features: ["Everything in Free", "AIVerse Fast", "AIVerse Balanced", "AIVerse Pro", "Choose your model", "Smarter responses"], cta: "Add API Key", popular: true },
   { name: "Enterprise", price: "Custom", period: "", desc: "For organizations and teams.", features: ["Everything in Boost", "API access", "Custom integrations", "Dedicated support", "On-premise deployment", "SLA guarantee"], cta: "Contact Us", popular: false },
 ];
 
 const FAQS = [
   { q: "What is CyberAI Tutor?", a: "CyberAI Tutor is a free AI-powered platform that teaches cybersecurity to beginners. You can ask questions, explore topics, and learn at your own pace — no experience required." },
-  { q: "Do I need an API key to use it?", a: "No! The local AI engine works right out of the box with no API key. If you want Gemini-powered responses, just add your free Gemini API key in the .env.local file." },
-  { q: "Is it really free?", a: "Yes, completely free. The local engine has no costs. Gemini API also has a generous free tier (up to 1,000 requests per day with certain models)." },
+  { q: "Do I need an API key to use it?", a: "No! The local AI engine works right out of the box with no API key. If you want cloud-powered responses, just add your free API key in the settings." },
+  { q: "Is it really free?", a: "Yes, completely free. The local engine has no costs. Cloud models also have a generous free tier for testing." },
   { q: "What topics do you cover?", a: "We cover 30+ cybersecurity topics including passwords, phishing, firewalls, encryption, ransomware, social engineering, SQL injection, XSS, VPNs, zero-days, penetration testing, incident response, prompt injection, and much more." },
   { q: "Do I need any prior knowledge?", a: "None at all. CyberAI Tutor is designed for complete beginners. We explain everything using simple language and real-world analogies." },
   { q: "Is this safe to use?", a: "Absolutely. Our AI teaches defensive cybersecurity concepts. We explain how attacks work so you can understand and prevent them — not to enable harmful activity." },
@@ -256,23 +256,6 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-background px-6 py-12">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 md:flex-row">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
-            </div>
-            <span className="text-sm font-semibold">CyberAI Tutor</span>
-          </div>
-          <p className="text-xs text-muted-foreground">&copy; 2026 CyberAI Tutor. All rights reserved.</p>
-          <div className="flex gap-6 text-xs text-muted-foreground">
-            <Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
-            <Link href="/terms" className="transition-colors hover:text-foreground">Terms</Link>
-            <Link href="/contact" className="transition-colors hover:text-foreground">Contact</Link>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

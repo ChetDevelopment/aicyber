@@ -51,7 +51,7 @@ const principles = [
   {
     icon: Star,
     title: "AI-Enhanced",
-    desc: "Powered by Gemini and Groq AI with a local fallback engine. Get cloud depth or offline reliability.",
+    desc: "Powered by our cloud AI engine with a local fallback. Get cloud depth or offline reliability.",
   },
 ];
 
@@ -161,7 +161,7 @@ export default function About() {
           <Badge variant="secondary" className="mb-4">Tech Stack</Badge>
           <h2 className="text-3xl font-bold sm:text-5xl">What powers CyberAI Tutor</h2>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
-            {["Next.js 16", "Tailwind CSS v4", "TypeScript", "Gemini AI", "Groq AI", "Local Engine", "Framer Motion", "Lucide Icons"].map(t => (
+            {["Next.js 16", "Tailwind CSS v4", "TypeScript", "Cloud AI", "Local Engine", "Framer Motion", "Lucide Icons"].map(t => (
               <Badge key={t} variant="secondary" className="px-3 py-1.5 text-sm">{t}</Badge>
             ))}
           </div>

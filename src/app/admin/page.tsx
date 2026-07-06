@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import {
   Sparkles, Shield, Key, Cpu, BarChart3, LogOut, Sun, Moon,
-  Check, X, Eye, EyeOff, RefreshCw, MessageSquare, Users, BookOpen,
+  Check, X, Eye, EyeOff, RefreshCw, MessageSquare, Users, BookOpen, Globe, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState(false);
   const [checking, setChecking] = useState(true);
   const [keys, setKeys] = useState({ gemini: false, groq: false });
-  const [tab, setTab] = useState<"dashboard" | "models" | "keys">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "models" | "keys" | "users">("dashboard");
   const [enabledModels, setEnabledModels] = useState<string[]>([]);
   const [showKey, setShowKey] = useState<string | null>(null);
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -190,6 +190,7 @@ export default function AdminPage() {
             { id: "dashboard" as const, label: "Dashboard", icon: BarChart3 },
             { id: "models" as const, label: "AI Models", icon: Cpu },
             { id: "keys" as const, label: "API Keys", icon: Key },
+            { id: "users" as const, label: "Users", icon: Users },
           ].map(t => {
             const Icon = t.icon;
             return (
@@ -338,7 +339,69 @@ export default function AdminPage() {
             </Card>
           </motion.div>
         )}
+
+        {tab === "users" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Visitors</CardTitle>
+                <CardDescription>Users who have visited the site, tracked via IP geolocation.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <VisitorsTable />
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function VisitorsTable() {
+  const [visitors, setVisitors] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      const data = JSON.parse(localStorage.getItem("cyberai_visitors") || "[]");
+      setVisitors(data.reverse());
+    } catch {}
+  }, []);
+
+  if (visitors.length === 0) {
+    return <p className="text-sm text-muted-foreground">No visitors tracked yet. Visitors are tracked via ip-api.com when they browse the site.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-border text-muted-foreground">
+            <th className="pb-2 pr-4 text-left font-medium">Country</th>
+            <th className="pb-2 pr-4 text-left font-medium">City</th>
+            <th className="pb-2 pr-4 text-left font-medium">IP</th>
+            <th className="pb-2 text-left font-medium">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visitors.slice(0, 100).map((v: any, i: number) => (
+            <tr key={i} className="border-b border-border/50 text-muted-foreground">
+              <td className="py-2 pr-4">
+                <div className="flex items-center gap-1.5">
+                  <Globe className="h-3 w-3" /> {v.country || "Unknown"}
+                </div>
+              </td>
+              <td className="py-2 pr-4">
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3" /> {v.city || "—"}
+                </div>
+              </td>
+              <td className="py-2 pr-4 font-mono">{v.ip || "—"}</td>
+              <td className="py-2">{v.time ? new Date(v.time).toLocaleString() : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

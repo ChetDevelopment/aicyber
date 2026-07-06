@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-provider";
+import { ThumbsUp, ThumbsDown, Clock, Bot, MessageCircle, X } from "lucide-react";
 
 interface Message {
   id: string;
@@ -55,10 +56,14 @@ const SUGGESTIONS = [
 ];
 
 const MODELS = [
-  { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite" },
-  { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
-  { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash" },
-  { id: "llama-3.1-8b-instant", label: "Llama 3.1 8B (Groq)" },
+  { id: "llama-3.1-8b-instant", label: "AIVerse Fast" },
+  { id: "llama-3.3-70b-versatile", label: "AIVerse Balanced" },
+  { id: "gemini-3.5-flash", label: "AIVerse Pro" },
+  { id: "meta-llama/llama-4-scout-17b-16e-instruct", label: "AIVerse Turbo" },
+  { id: "qwen/qwen3-32b", label: "AIVerse Ultra" },
+  { id: "openai/gpt-oss-20b", label: "AIVerse Reasoning" },
+  { id: "openai/gpt-oss-120b", label: "AIVerse Master" },
+  { id: "groq/compound", label: "AIVerse Agent" },
 ];
 
 const STORAGE_KEY = "cyberai_sessions";
@@ -69,7 +74,7 @@ export default function ChatPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite");
@@ -77,6 +82,10 @@ export default function ChatPage() {
   const [newProjectName, setNewProjectName] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [persona, setPersona] = useState<string>("tutor");
+  const [thumbs, setThumbs] = useState<Record<string, "up" | "down" | null>>({});
+  const [responseTime, setResponseTime] = useState<Record<string, number>>({});
+  const [isMobile, setIsMobile] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -115,6 +124,13 @@ export default function ChatPage() {
       projectInputRef.current.focus();
     }
   }, [showNewProject]);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, []);
 
   const createSession = useCallback((type: "chat" | "research" = "chat", projectId?: string) => {
     const id = Date.now().toString();
@@ -177,25 +193,36 @@ export default function ChatPage() {
     updateSession(sessionId!, { messages: updatedMessages, title });
     setLoading(true);
 
+    const startTime = performance.now();
     try {
       const history = updatedMessages.slice(0, -1).map(m => ({ role: m.role, text: m.text }));
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, history, model: selectedModel }),
+        body: JSON.stringify({ message: msg, history, model: selectedModel, persona }),
       });
       const data = await res.json();
+      const elapsed = Math.round(performance.now() - startTime);
       const reply = data.reply || "I'm not sure how to answer that. Could you try asking in a different way?";
-      updateSession(sessionId!, { messages: [...updatedMessages, { id: (Date.now() + 1).toString(), role: "assistant", text: reply }] });
+      const replyId = (Date.now() + 1).toString();
+      setResponseTime(prev => ({ ...prev, [replyId]: elapsed }));
+      updateSession(sessionId!, { messages: [...updatedMessages, { id: replyId, role: "assistant", text: reply }] });
     } catch {
       updateSession(sessionId!, { messages: [...updatedMessages, { id: (Date.now() + 1).toString(), role: "assistant", text: "Sorry, I hit an error. Please try again." }] });
     }
     setLoading(false);
   };
 
+  const selectSession = (id: string) => {
+    setActiveId(id);
+    setInput("");
+    if (isMobile) setSidebarOpen(false);
+  };
+
   const selectTopic = (topicId: string) => {
     const topic = TOPICS.find(t => t.id === topicId);
     if (topic) sendMessage(`Teach me about ${topic.label}`);
+    if (isMobile) setSidebarOpen(false);
   };
 
   const chatSessions = sessions.filter(s => s.type === "chat" && !s.projectId);
@@ -230,8 +257,13 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+      {/* Sidebar backdrop */}
+      {isMobile && sidebarOpen && (
+        <div className="fixed inset-0 z-10 bg-black/40 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className={`relative z-20 flex flex-col border-r border-border bg-background transition-all duration-300 shrink-0 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden'}`}>
+      <aside className={`relative z-20 flex flex-col border-r border-border bg-background transition-all duration-300 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden'} ${isMobile ? 'fixed left-0 top-0 h-full shadow-xl' : 'shrink-0'}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border">
           <div className="flex items-center gap-2">
@@ -240,7 +272,7 @@ export default function ChatPage() {
             </div>
             <span className="text-sm font-semibold">CyberAI</span>
           </div>
-          <button onClick={() => createSession("chat")} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all" title="New chat">
+          <button onClick={() => createSession("chat")} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all" title="New chat">
             <Plus className="h-4 w-4" />
           </button>
         </div>
@@ -268,7 +300,7 @@ export default function ChatPage() {
               <p className="px-3 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Research</p>
               <div className="space-y-0.5">
                 {researchSessions.map(s => (
-                  <div key={s.id} onClick={() => { setActiveId(s.id); setInput(""); }}
+                  <div key={s.id} onClick={() => { selectSession(s.id)}}
                     className={`group flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-all text-sm ${
                       activeId === s.id ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     }`}
@@ -332,7 +364,7 @@ export default function ChatPage() {
                           New chat in project
                         </button>
                         {projectChats.map(s => (
-                          <div key={s.id} onClick={() => { setActiveId(s.id); setInput(""); }}
+                          <div key={s.id} onClick={() => { selectSession(s.id)}}
                             className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 cursor-pointer transition-all text-sm ${
                               activeId === s.id ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                             }`}
@@ -358,7 +390,7 @@ export default function ChatPage() {
               <p className="px-3 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">History</p>
               <div className="space-y-0.5">
                 {chatSessions.map(s => (
-                  <div key={s.id} onClick={() => { setActiveId(s.id); setInput(""); }}
+                  <div key={s.id} onClick={() => { selectSession(s.id)}}
                     className={`group flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-all text-sm ${
                       activeId === s.id ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     }`}
@@ -384,7 +416,7 @@ export default function ChatPage() {
       <div className="flex flex-1 flex-col min-w-0">
         <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all">
               <Menu className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2">
@@ -397,6 +429,16 @@ export default function ChatPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
+              <select value={persona} onChange={e => setPersona(e.target.value)}
+                className="appearance-none bg-transparent border border-border rounded-lg px-2 py-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="tutor" className="bg-background text-foreground">👨‍🏫 Tutor</option>
+                <option value="pentester" className="bg-background text-foreground">🔧 Pentester</option>
+                <option value="analyst" className="bg-background text-foreground">📊 SOC Analyst</option>
+              </select>
+              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground text-[10px]">▾</span>
+            </div>
+            <div className="relative">
               <select value={selectedModel} onChange={e => setSelectedModel(e.target.value)}
                 className="appearance-none bg-transparent border border-border rounded-lg px-2 py-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -406,7 +448,7 @@ export default function ChatPage() {
               </select>
               <span className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground text-[10px]">▾</span>
             </div>
-            <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all">
+            <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all">
               {mounted && (resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
             </button>
             <span className="text-[10px] text-muted-foreground"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1 animate-pulse" />online</span>
@@ -463,11 +505,30 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""}`}>
-                    <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                      <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground rounded-xl rounded-tr-sm"
                         : "bg-secondary text-secondary-foreground border border-border rounded-xl rounded-tl-sm [&_strong]:font-semibold"
                     }`}>{msg.text}</div>
+                    {msg.role === "assistant" && (
+                      <div className="mt-1 flex items-center gap-2">
+                        {responseTime[msg.id] && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                            <Clock className="h-3 w-3" /> {responseTime[msg.id]}ms
+                          </span>
+                        )}
+                        <button onClick={() => setThumbs(prev => ({ ...prev, [msg.id]: prev[msg.id] === "up" ? null : "up" }))}
+                          className={`p-0.5 transition-all ${thumbs[msg.id] === "up" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          <ThumbsUp className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => setThumbs(prev => ({ ...prev, [msg.id]: prev[msg.id] === "down" ? null : "down" }))}
+                          className={`p-0.5 transition-all ${thumbs[msg.id] === "down" ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          <ThumbsDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {msg.role === "user" && (
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted mt-0.5">
