@@ -13,6 +13,12 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "CyberAI Tutor — Learn Cybersecurity with AI",
   description: "An AI-powered chat that teaches cybersecurity to beginners. Learn about passwords, phishing, network security, and more.",
+  icons: {
+    icon: [
+      { url: "/CyberAI.svg", type: "image/svg+xml" },
+      { url: "/CyberAI.png", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
