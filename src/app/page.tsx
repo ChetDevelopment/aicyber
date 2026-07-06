@@ -260,8 +260,8 @@ export default function Home() {
       <footer className="border-t border-border bg-background px-6 py-12">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 md:flex-row">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md overflow-hidden">
-              <img src="/CyberAI.png" alt="" className="h-6 w-6 object-cover" />
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
+              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
             <span className="text-sm font-semibold">CyberAI Tutor</span>
           </div>

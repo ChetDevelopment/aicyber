@@ -84,7 +84,7 @@ export function FloatingChat() {
             {/* Header */}
             <div className="flex items-center justify-between rounded-t-2xl border-b border-border bg-primary px-4 py-3 text-primary-foreground">
               <div className="flex items-center gap-2">
-                <img src="/CyberAI.png" alt="" className="h-5 w-5 rounded" />
+                <Sparkles className="h-5 w-5" />
                 <span className="text-sm font-semibold">CyberAI Tutor</span>
               </div>
               <button onClick={() => setOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-primary-foreground/20 transition-all">
