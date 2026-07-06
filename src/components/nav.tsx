@@ -47,9 +47,7 @@ export function Nav() {
     }`}>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-lg shadow-primary/20">
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src="/CyberAI.png" alt="CyberAI Tutor" className="h-8 w-8 rounded-lg" />
           <span className="text-lg font-bold text-foreground">CyberAI Tutor</span>
         </Link>
 

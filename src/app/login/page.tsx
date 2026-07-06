@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Sparkles, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const AIVERSE_HOST = process.env.NEXT_PUBLIC_AIVERSE_URL || "https://aiverse.app"
+const AIVERSE_HOST = process.env.NEXT_PUBLIC_AIVERSE_URL || "https://aiverses.app"
 
 export default function LoginPage() {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)

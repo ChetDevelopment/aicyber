@@ -205,8 +205,8 @@ export default function ChatPage() {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background p-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20">
-            <Sparkles className="h-8 w-8 text-primary-foreground" />
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl overflow-hidden shadow-lg shadow-primary/20">
+            <img src="/CyberAI.png" alt="CyberAI Tutor" className="h-16 w-16 object-cover" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Sign in required</h1>
           <p className="mt-2 text-sm text-muted-foreground">You need to sign in to use the AI tutor.</p>
@@ -235,8 +235,8 @@ export default function ChatPage() {
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+            <div className="flex h-6 w-6 items-center justify-center rounded-md overflow-hidden">
+              <img src="/CyberAI.png" alt="" className="h-6 w-6 object-cover" />
             </div>
             <span className="text-sm font-semibold">CyberAI</span>
           </div>
