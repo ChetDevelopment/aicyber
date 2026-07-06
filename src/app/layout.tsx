@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { Nav } from "@/components/nav";
 import { FloatingChatWrapper } from "@/components/floating-chat-wrapper";
+import { PwaInstall } from "@/components/pwa-install";
 import { Footer } from "@/components/footer";
 import "./globals.css";
 
@@ -13,8 +14,12 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "CyberAI Tutor — Learn Cybersecurity with AI",
   description: "An AI-powered chat that teaches cybersecurity to beginners. Learn about passwords, phishing, network security, and more.",
-  icons: {
-    icon: "/CyberAI.png",
+  icons: { icon: "/CyberAI.png" },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "CyberAI Tutor",
+    statusBarStyle: "black-translucent",
   },
 };
 
@@ -27,8 +32,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Nav />
             <main>{children}</main>
             <FloatingChatWrapper />
+            <PwaInstall />
           </AuthProvider>
         </ThemeProvider>
+        <script dangerouslySetInnerHTML={{
+          __html: `if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js")})}`,
+        }} />
       </body>
     </html>
   );
