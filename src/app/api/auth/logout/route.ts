@@ -5,7 +5,7 @@ const ALL_COOKIES = ["cyberai_session", "aiverse_local_session", "aiverse_google
 export async function POST(request: NextRequest) {
   const isLocal = request.url.includes("localhost")
   const clearOptions: Record<string, unknown> = { path: "/", maxAge: 0 }
-  if (!isLocal) clearOptions.domain = ".aiverse.app"
+  if (!isLocal) clearOptions.domain = `.${new URL(request.url).hostname.split(".").slice(-2).join(".")}`
 
   const response = NextResponse.redirect(new URL("/", request.url))
   for (const name of ALL_COOKIES) {

@@ -90,7 +90,8 @@ export function Nav() {
             >
               {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-          )}
+            )}
+            <Link href="/admin" className="hidden sm:flex text-xs text-muted-foreground hover:text-foreground transition-colors">Admin</Link>
           {loading ? null : user ? (
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
