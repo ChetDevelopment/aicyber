@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { verifySession } from "@/lib/auth"
 
-function getUser(request: NextRequest) {
+async function getUser(request: NextRequest) {
   const session = request.cookies.get("cyberai_session")
   if (!session?.value) return null
   try {
-    const data = JSON.parse(Buffer.from(session.value, "base64").toString())
-    return data as { id: string; email: string }
+    return await verifySession(session.value)
   } catch {
     return null
   }
@@ -16,7 +16,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = getUser(request)
+  const user = await getUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
@@ -36,7 +36,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = getUser(request)
+  const user = await getUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
@@ -62,7 +62,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = getUser(request)
+  const user = await getUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params

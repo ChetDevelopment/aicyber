@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { verifySession } from "@/lib/auth"
 
-function getUser(request: NextRequest) {
+async function getUser(request: NextRequest) {
   const cookie = request.cookies.get("cyberai_session")
   if (!cookie?.value) return null
-  try { return JSON.parse(Buffer.from(cookie.value, "base64").toString()) as { id: string; email: string } }
+  try { return await verifySession(cookie.value) }
   catch { return null }
 }
 
 export async function GET(request: NextRequest) {
-  const user = getUser(request)
+  const user = await getUser(request)
   if (!user) return NextResponse.json({ projects: [] })
   try {
     const projects = await prisma.project.findMany({
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const user = getUser(request)
+  const user = await getUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { name } = await request.json()
   if (!name?.trim()) return NextResponse.json({ error: "Name required" }, { status: 400 })

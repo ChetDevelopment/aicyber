@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { verifySession } from "@/lib/auth"
 
 export async function GET() {
   try {
@@ -14,8 +15,8 @@ export async function POST(request: NextRequest) {
   const cookie = request.cookies.get("cyberai_session")
   if (!cookie?.value) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   try {
-    const data = JSON.parse(Buffer.from(cookie.value, "base64").toString())
-    if (data.email !== "admin@aiverses.app") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const data = await verifySession(cookie.value)
+    if (!data || data.email !== "admin@aiverses.app") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }) }
 
   try {

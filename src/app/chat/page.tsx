@@ -8,7 +8,7 @@ import {
   Send, Sparkles, Sun, Moon, Menu, Plus, Trash2, User,
   Shield, Wifi, Lock, Bug, Eye, Key, Globe, Mail,
   BookOpen, FolderKanban, FolderPlus, ChevronRight,
-  ThumbsUp, ThumbsDown, Clock, Paperclip, Mic, X,
+  ThumbsUp, ThumbsDown, Clock, Paperclip, Mic, Languages, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -747,6 +747,12 @@ export default function ChatPage() {
                           className={`p-0.5 transition-all ${thumbs[msg.id] === "down" ? "text-destructive" : "text-muted-foreground hover:text-foreground"}`}
                         >
                           <ThumbsDown className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => window.open(`https://translate.google.com/?sl=auto&tl=kh&text=${encodeURIComponent(displayText)}`, "_blank")}
+                          className="p-0.5 text-muted-foreground hover:text-foreground transition-all"
+                          title="Translate (opens Google Translate)"
+                        >
+                          <Languages className="h-3 w-3" />
                         </button>
                       </div>
                     )}
