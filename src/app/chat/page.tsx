@@ -64,9 +64,6 @@ const SUGGESTIONS = [
   "How do I stay safe on public WiFi?",
 ];
 
-const STORAGE_KEY = "cyberai_sessions";
-const PROJECTS_KEY = "cyberai_projects";
-
 const MODELS = [
   { id: "gemini-2.0-flash", label: "AIVerse Flash", vision: true },
   { id: "gemini-2.0-flash-lite", label: "AIVerse Lite", vision: true },
@@ -127,40 +124,28 @@ export default function ChatPage() {
 
   useEffect(() => {
     setMounted(true);
-    if (user) {
-      fetch("/api/auth/preferred-model")
-        .then(r => r.json())
-        .then(d => { if (d.model && MODELS.some(m => m.id === d.model)) setSelectedModel(d.model); })
-        .catch(() => {})
-      setSessionsLoading(true)
-      Promise.all([
-        fetch("/api/sessions").then(r => r.json()),
-        fetch("/api/projects").then(r => r.json()),
-      ]).then(([sData, pData]) => {
-        setSessionsLoading(false)
-        if (sData.sessions) {
-          setSessions(sData.sessions.map((s: any) => ({
-            id: s.id, title: s.title, messages: s.messages || [],
-            createdAt: new Date(s.updatedAt).getTime(), type: s.type || "chat",
-            projectId: s.projectId || undefined,
-          })))
-        }
-        if (pData.projects) {
-          setProjects(pData.projects.map((p: any) => ({ id: p.id, name: p.name, createdAt: new Date(p.createdAt).getTime() })))
-        }
-      }).catch(() => {})
-    } else {
-      // Guest: load from localStorage
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        if (saved.length > 0) {
-          setSessions(saved);
-          if (!activeId) setActiveId(saved[0].id);
-        }
-        const p = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-        if (p.length > 0) setProjects(p);
-      } catch {}
-    }
+    if (!user) return;
+    fetch("/api/auth/preferred-model")
+      .then(r => r.json())
+      .then(d => { if (d.model && MODELS.some(m => m.id === d.model)) setSelectedModel(d.model); })
+      .catch(() => {})
+    setSessionsLoading(true)
+    Promise.all([
+      fetch("/api/sessions").then(r => r.json()),
+      fetch("/api/projects").then(r => r.json()),
+    ]).then(([sData, pData]) => {
+      setSessionsLoading(false)
+      if (sData.sessions) {
+        setSessions(sData.sessions.map((s: any) => ({
+          id: s.id, title: s.title, messages: s.messages || [],
+          createdAt: new Date(s.updatedAt).getTime(), type: s.type || "chat",
+          projectId: s.projectId || undefined,
+        })))
+      }
+      if (pData.projects) {
+        setProjects(pData.projects.map((p: any) => ({ id: p.id, name: p.name, createdAt: new Date(p.createdAt).getTime() })))
+      }
+    }).catch(() => {})
   }, [user]);
 
   useEffect(() => {
@@ -435,9 +420,7 @@ export default function ChatPage() {
   const sendMessage = async (text: string, imgs?: AttachedImage[]) => {
     const msg = text.trim();
     if ((!msg && (!imgs || imgs.length === 0)) || loadingRef.current) return;
-    if (!user && getGuestCount() >= FREE_LIMIT) return;
     const images = imgs || pendingImages;
-    if (!user) incrementGuestCount();
     loadingRef.current = true;
     setInput("");
     setPendingImages([]);
@@ -520,31 +503,33 @@ export default function ChatPage() {
     if (isMobile) setSidebarOpen(false);
   };
 
-  // Guest rate limiting
-  const FREE_LIMIT = 5;
-  const getGuestCount = () => {
-    try {
-      const today = new Date().toDateString();
-      const raw = localStorage.getItem("cyberai_guest_count");
-      if (!raw) return 0;
-      const { date, count } = JSON.parse(raw);
-      return date === today ? count : 0;
-    } catch { return 0; }
-  };
-  const [guestCount, setGuestCount] = useState(getGuestCount);
-  const guestLimitReached = !user && guestCount >= FREE_LIMIT;
-
-  const incrementGuestCount = () => {
-    const today = new Date().toDateString();
-    const newCount = getGuestCount() + 1;
-    localStorage.setItem("cyberai_guest_count", JSON.stringify({ date: today, count: newCount }));
-    setGuestCount(newCount);
-  };
-
   if (authLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/30 border-t-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background p-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20">
+            <Sparkles className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">CyberAI Tutor</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Sign in to continue your learning journey.</p>
+          <Link href="/login">
+            <Button size="lg" className="mt-8 h-12 rounded-xl px-8 w-full">
+              Sign in
+            </Button>
+          </Link>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="text-primary hover:underline">Sign up</Link>
+          </p>
+        </motion.div>
       </div>
     );
   }
@@ -752,12 +737,17 @@ export default function ChatPage() {
             <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all">
               {mounted && (resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
             </button>
-            {!user && (
-              <Link href="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Log in
-              </Link>
-            )}
-            {user && <span className="text-[10px] text-muted-foreground"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mr-1 animate-pulse" />online</span>}
+            <div className="flex items-center gap-2 pl-2 border-l border-border">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+              <span className="hidden sm:block text-xs text-muted-foreground max-w-[100px] truncate">{user?.name || user?.email}</span>
+              <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/login"; }}
+                className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Log out
+              </button>
+            </div>
           </div>
         </header>
 
@@ -951,19 +941,7 @@ export default function ChatPage() {
                 )}
               </AnimatePresence>
 
-              {guestLimitReached && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6 text-center"
-                >
-                  <p className="text-sm font-medium text-foreground mb-2">Free limit reached</p>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    You've used all {FREE_LIMIT} free requests today. Sign in for unlimited access.
-                  </p>
-                  <Link href="/login">
-                    <Button size="sm" className="rounded-lg">Sign in to continue</Button>
-                  </Link>
-                </motion.div>
-              )}
+
 
               <div ref={chatEnd} />
             </div>
@@ -973,18 +951,6 @@ export default function ChatPage() {
         {/* Input */}
         <div className="border-t border-border bg-background/80 backdrop-blur-xl px-4 py-3 shrink-0">
           <div className="mx-auto max-w-3xl">
-            {!user && (
-              <div className="flex items-center justify-between mb-2 px-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">
-                    Free: <span className={guestLimitReached ? "text-destructive font-medium" : "text-foreground"}>{FREE_LIMIT - guestCount}</span>/{FREE_LIMIT} requests today
-                  </span>
-                  {guestLimitReached && (
-                    <Link href="/login" className="text-[10px] text-primary hover:underline">Sign in for unlimited</Link>
-                  )}
-                </div>
-              </div>
-            )}
             <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
             {pendingImages.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
@@ -1008,15 +974,15 @@ export default function ChatPage() {
               </div>
             )}
             <div className="flex items-end gap-2 rounded-xl border border-input bg-accent/30 px-3.5 py-2 focus-within:border-ring/50 focus-within:shadow-sm transition-all">
-              <button onClick={() => fileInputRef.current?.click()} disabled={loading || !canUseVision || guestLimitReached}
+              <button onClick={() => fileInputRef.current?.click()} disabled={loading || !canUseVision}
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all disabled:opacity-30 ${
-                  canUseVision && !guestLimitReached ? "text-muted-foreground hover:bg-accent hover:text-foreground" : "text-muted-foreground/50 cursor-not-allowed"
+                  canUseVision ? "text-muted-foreground hover:bg-accent hover:text-foreground" : "text-muted-foreground/50 cursor-not-allowed"
                 }`}
                 title={canUseVision ? "Attach image (📷)" : "Image upload requires AIVerse Flash/Lite/Pro"}
               >
                 <Paperclip className="h-4 w-4" />
               </button>
-              <button onClick={toggleRecording} disabled={loading || guestLimitReached}
+              <button onClick={toggleRecording} disabled={loading}
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all disabled:opacity-40 ${
                   recording ? "bg-destructive text-destructive-foreground animate-pulse" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 }`}
@@ -1026,8 +992,7 @@ export default function ChatPage() {
               </button>
               <textarea ref={textRef} value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
-                placeholder={guestLimitReached ? "Sign in to continue..." : "Ask a cybersecurity question..."}
-                disabled={loading || guestLimitReached} rows={1}
+                placeholder="Ask a cybersecurity question..." disabled={loading} rows={1}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-[140px] disabled:opacity-40 scrollbar-thin"
               />
               {loading ? (
@@ -1038,7 +1003,7 @@ export default function ChatPage() {
                   <Square className="h-4 w-4" />
                 </button>
               ) : (
-                <button onClick={() => sendMessage(input, pendingImages)} disabled={(!input.trim() && pendingImages.length === 0) || guestLimitReached}
+                <button onClick={() => sendMessage(input, pendingImages)} disabled={!input.trim() && pendingImages.length === 0}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-all active:scale-[0.97]"
                 >
                   <Send className="h-4 w-4" />
