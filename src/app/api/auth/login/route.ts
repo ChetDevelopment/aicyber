@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = createSession({ id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, provider: "local" })
-    const response = NextResponse.json({ success: true, redirect: "/" })
+    const response = NextResponse.json({ success: true, redirect: "/chat" })
     response.cookies.set("cyberai_session", token, { path: "/", httpOnly: false, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 })
     return response
   } catch (error) {

@@ -24,7 +24,7 @@ export default function SignupPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        window.location.href = data.redirect || "/"
+        window.location.href = data.redirect || "/chat"
       } else {
         setError(data.error || "Registration failed")
       }

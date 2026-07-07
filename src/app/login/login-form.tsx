@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 
 export default function LoginForm() {
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get("redirect") || "/"
+  const redirectTo = searchParams.get("redirect") || "/chat"
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
