@@ -1,15 +1,13 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
-const ALL_COOKIES = ["cyberai_session", "aiverse_local_session", "aiverse_google_session", "aiverse_github_session"]
-
-export async function POST(request: NextRequest) {
-  const isLocal = request.url.includes("localhost")
-  const clearOptions: Record<string, unknown> = { path: "/", maxAge: 0 }
-  if (!isLocal) clearOptions.domain = `.${new URL(request.url).hostname.split(".").slice(-2).join(".")}`
-
-  const response = NextResponse.redirect(new URL("/", request.url))
-  for (const name of ALL_COOKIES) {
-    response.cookies.set(name, "", clearOptions)
-  }
+export async function POST() {
+  const response = NextResponse.json({ success: true })
+  response.cookies.set("cyberai_session", "", {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 0,
+  })
   return response
 }

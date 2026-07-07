@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { createSession } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,14 +20,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
-    const session = { id: user.id, email: user.email, name: user.name, avatarUrl: null, provider: "local" }
-    const encoded = Buffer.from(JSON.stringify(session)).toString("base64")
+    const token = await createSession({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      provider: "local",
+    })
 
     const response = NextResponse.json({ success: true, redirect: "/" })
-    response.cookies.set("cyberai_session", encoded, {
+    response.cookies.set("cyberai_session", token, {
       path: "/",
-      httpOnly: false,
+      httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 7,
     })
     return response

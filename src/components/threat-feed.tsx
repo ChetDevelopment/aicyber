@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Shield, AlertTriangle, Skull, Zap, Globe, Bug } from "lucide-react";
 
 const THREATS = [
@@ -23,20 +23,19 @@ const THREATS = [
 
 export function ThreatFeed() {
   const [items, setItems] = useState(THREATS.slice(0, 5));
-  const [offset, setOffset] = useState(5);
+  const offsetRef = useRef(5);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setItems(prev => {
         const next = [...prev.slice(1)];
-        const idx = offset % THREATS.length;
-        next.push(THREATS[idx]);
-        setOffset(o => o + 1);
+        next.push(THREATS[offsetRef.current % THREATS.length]);
+        offsetRef.current += 1;
         return next;
       });
     }, 4000);
     return () => clearInterval(interval);
-  }, [offset]);
+  }, []);
 
   return (
     <div className="w-full overflow-hidden border-t border-border bg-muted/80">

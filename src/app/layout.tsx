@@ -35,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <FloatingChatWrapper />
             <PwaInstall />
             <VisitorTrack />
+            <Footer />
           </AuthProvider>
         </ThemeProvider>
         <script dangerouslySetInnerHTML={{

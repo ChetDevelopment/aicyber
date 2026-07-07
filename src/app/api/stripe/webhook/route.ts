@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+let stripe: any = null
 function getStripe() {
-  const { default: Stripe } = require("stripe") as typeof import("stripe")
-  return new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2025-03-31" as any })
+  if (!stripe) {
+    const Stripe = require("stripe")
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "")
+  }
+  return stripe
 }
 
 export async function POST(request: Request) {
@@ -22,17 +26,20 @@ export async function POST(request: Request) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object
       const userId = session.metadata?.userId
-      if (userId) {
-        const subId = session.subscription as string
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            isPro: true,
-            proSince: new Date(),
-            stripeSubscriptionId: subId,
-          },
-        })
+      if (!userId) {
+        console.error("[STRIPE] No userId in session metadata")
+        return NextResponse.json({ error: "Missing userId" }, { status: 400 })
       }
+      const subId = session.subscription as string
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isPro: true,
+          proSince: new Date(),
+          stripeSubscriptionId: subId,
+        },
+      })
+      console.log(`[STRIPE] Pro activated for user ${userId}`)
     }
 
     if (event.type === "customer.subscription.deleted") {
@@ -44,10 +51,12 @@ export async function POST(request: Request) {
           where: { id: user.id },
           data: { isPro: false, proSince: null, stripeSubscriptionId: null },
         })
+        console.log(`[STRIPE] Pro deactivated for user ${user.id}`)
       }
     }
   } catch (e) {
-    console.error("[STRIPE_WEBHOOK]", e)
+    console.error("[STRIPE_WEBHOOK] DB update failed, returning 500 for retry:", e)
+    return NextResponse.json({ error: "DB update failed" }, { status: 500 })
   }
 
   return NextResponse.json({ received: true })

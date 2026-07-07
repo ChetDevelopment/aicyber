@@ -25,12 +25,12 @@ export default function ContactPage() {
     if (!name.trim() || !email.trim() || !message.trim()) return
     setSending(true)
     try {
-      await fetch("/api/contact", {
+      const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, message }),
       })
-      setSent(true)
+      if (res.ok) setSent(true)
     } catch {}
     setSending(false)
   }

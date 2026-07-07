@@ -1,5 +1,5 @@
-const CLIENT_ID = process.env.NEXT_PUBLIC_SUPABASE_AUTH_GOOGLE_CLIENT_ID || ""
-const CLIENT_SECRET = process.env.NEXT_PUBLIC_SUPABASE_AUTH_GOOGLE_CLIENT_SECRET || ""
+const CLIENT_ID = process.env.SUPABASE_AUTH_GOOGLE_CLIENT_ID || ""
+const CLIENT_SECRET = process.env.SUPABASE_AUTH_GOOGLE_CLIENT_SECRET || ""
 const SCOPES = ["openid", "email", "profile"].join(" ")
 
 export function getGoogleAuthUrl(origin: string) {
