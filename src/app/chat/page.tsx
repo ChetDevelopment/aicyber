@@ -64,11 +64,11 @@ const SUGGESTIONS = [
 ];
 
 const MODELS = [
-  { id: "gemini-2.0-flash", label: "AIVerse Flash" },
-  { id: "gemini-2.0-flash-lite", label: "AIVerse Lite" },
-  { id: "gemini-1.5-flash", label: "AIVerse Pro" },
-  { id: "llama-3.1-8b-instant", label: "AIVerse Fast" },
-  { id: "llama-3.3-70b-versatile", label: "AIVerse Balanced" },
+  { id: "gemini-2.0-flash", label: "AIVerse Flash", vision: true },
+  { id: "gemini-2.0-flash-lite", label: "AIVerse Lite", vision: true },
+  { id: "gemini-1.5-flash", label: "AIVerse Pro", vision: true },
+  { id: "llama-3.1-8b-instant", label: "AIVerse Fast", vision: false },
+  { id: "llama-3.3-70b-versatile", label: "AIVerse Balanced", vision: false },
 ];
 
 export default function ChatPage() {
@@ -113,6 +113,8 @@ export default function ChatPage() {
   const messages = activeSession?.messages || [];
   const chatSessions = useMemo(() => sessions.filter(s => s.type === "chat" && !s.projectId), [sessions]);
   const researchSessions = useMemo(() => sessions.filter(s => s.type === "research"), [sessions]);
+  const currentModel = useMemo(() => MODELS.find(m => m.id === selectedModel), [selectedModel]);
+  const canUseVision = currentModel?.vision === true;
 
   useEffect(() => {
     setMounted(true);
@@ -649,7 +651,7 @@ export default function ChatPage() {
                 className="appearance-none bg-transparent border border-border rounded-lg px-2 py-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {MODELS.map(m => (
-                  <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}</option>
+                  <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}{m.vision ? " 📷" : ""}</option>
                 ))}
               </select>
               <span className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground text-[10px]">▾</span>
@@ -793,6 +795,11 @@ export default function ChatPage() {
             <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
             {pendingImages.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
+                {!canUseVision && (
+                  <div className="w-full text-[10px] text-amber-500 flex items-center gap-1">
+                    ⚠ Switch to AIVerse Flash/Lite/Pro (📷) to send images
+                  </div>
+                )}
                 {pendingImages.map(img => (
                   <div key={img.id} className="relative group">
                     <img src={`data:${img.mimeType};base64,${img.data}`} alt={img.name}
@@ -808,9 +815,11 @@ export default function ChatPage() {
               </div>
             )}
             <div className="flex items-end gap-2 rounded-xl border border-input bg-accent/30 px-3.5 py-2 focus-within:border-ring/50 focus-within:shadow-sm transition-all">
-              <button onClick={() => fileInputRef.current?.click()} disabled={loading}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all disabled:opacity-40"
-                title="Attach image"
+              <button onClick={() => fileInputRef.current?.click()} disabled={loading || !canUseVision}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all disabled:opacity-30 ${
+                  canUseVision ? "text-muted-foreground hover:bg-accent hover:text-foreground" : "text-muted-foreground/50 cursor-not-allowed"
+                }`}
+                title={canUseVision ? "Attach image (📷)" : "Image upload requires AIVerse Flash/Lite/Pro"}
               >
                 <Paperclip className="h-4 w-4" />
               </button>
