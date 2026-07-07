@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sun, Moon, Menu, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useUser } from "@/hooks/use-user";
+import { useAuth } from "@/components/auth-provider";
 
 const PAGE_LINKS = [
   { href: "/", label: "Home" },
@@ -27,7 +27,7 @@ export function Nav() {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, loading } = useUser();
+  const { user, loading, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -123,7 +123,7 @@ export function Nav() {
                 {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
               </div>
               <span className="hidden sm:block text-xs text-muted-foreground max-w-[100px] truncate">{user.name || user.email}</span>
-              <button onClick={() => fetch("/api/auth/logout", { method: "POST" }).then(() => window.location.href = "/")}
+              <button onClick={logout}
                 className="text-xs text-muted-foreground hover:text-destructive transition-colors"
               >
                 Logout
@@ -175,8 +175,8 @@ export function Nav() {
             </div>
           )}
           <div className="pt-2 border-t border-border">
-            {loading ? null : user ? (
-              <button onClick={() => fetch("/api/auth/logout", { method: "POST" }).then(() => window.location.href = "/")}
+              {loading ? null : user ? (
+              <button onClick={logout}
                 className="block w-full text-left text-sm text-muted-foreground hover:text-destructive transition-colors"
               >
                 Sign out ({user.name || user.email})

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 
 interface User {
@@ -49,8 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/")
   }
 
+  const ctx = useMemo(() => ({ user, loading, logout, refreshUser: fetchUser }), [user, loading, logout, fetchUser])
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout, refreshUser: fetchUser }}>
+    <AuthContext.Provider value={ctx}>
       {children}
     </AuthContext.Provider>
   )

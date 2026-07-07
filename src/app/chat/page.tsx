@@ -79,6 +79,7 @@ export default function ChatPage() {
   const [thumbs, setThumbs] = useState<Record<string, "up" | "down" | null>>({});
   const [responseTime, setResponseTime] = useState<Record<string, number>>({});
   const [modelUsed, setModelUsed] = useState<Record<string, string>>({});
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
@@ -100,10 +101,12 @@ export default function ChatPage() {
         .catch(() => {})
     }
     if (!user) return
+    setSessionsLoading(true)
     Promise.all([
       fetch("/api/sessions").then(r => r.json()),
       fetch("/api/projects").then(r => r.json()),
     ]).then(([sData, pData]) => {
+      setSessionsLoading(false)
       if (sData.sessions) {
         setSessions(sData.sessions.map((s: any) => ({
           id: s.id, title: s.title, messages: s.messages || [],
@@ -250,10 +253,11 @@ export default function ChatPage() {
 
     let sessionId = activeId;
     if (!sessionId) sessionId = createSession("chat");
-    await new Promise(r => setTimeout(r, 0));
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", text: msg };
-    const session = sessions.find(s => s.id === sessionId) || { id: sessionId!, title: "New chat", messages: [], createdAt: Date.now(), type: "chat" as const };
+    // Use ref to get latest sessions state (avoids stale closure)
+    const current = sessionsRef.current;
+    const session = current.find(s => s.id === sessionId) || { id: sessionId!, title: "New chat", messages: [], createdAt: Date.now(), type: "chat" as const };
     const updatedMessages = [...session.messages, userMsg];
     const title = session.messages.length === 0 ? msg.slice(0, 50) + (msg.length > 50 ? "..." : "") : session.title;
 
@@ -283,7 +287,7 @@ export default function ChatPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: finalMessages, title }),
-        }).catch(() => {})
+    }).catch(() => { setSessionsLoading(false) })
       }
     } catch {
       const errMessages = [...updatedMessages, { id: (Date.now() + 1).toString(), role: "assistant" as const, text: "Sorry, I hit an error. Please try again." }];
@@ -495,8 +499,15 @@ export default function ChatPage() {
             </div>
           )}
 
-          {sessions.length === 0 && (
+          {sessions.length === 0 && !sessionsLoading && (
             <div className="py-6 text-center text-xs text-muted-foreground">No conversations yet</div>
+          )}
+          {sessionsLoading && (
+            <div className="py-6 space-y-2">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-8 rounded-lg bg-muted/50 animate-pulse mx-2" />
+              ))}
+            </div>
           )}
         </div>
       </aside>
