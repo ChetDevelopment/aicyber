@@ -5,7 +5,6 @@ import { AuthProvider } from "@/components/auth-provider";
 import { Nav } from "@/components/nav";
 import { FloatingChatWrapper } from "@/components/floating-chat-wrapper";
 import { PwaInstall } from "@/components/pwa-install";
-import { Footer } from "@/components/footer";
 import { VisitorTrack } from "@/components/visitor-track";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ConditionalFooter } from "@/components/conditional-footer";
