@@ -246,16 +246,17 @@ export default function ChatPage() {
     });
   };
 
+  const loadingRef = useRef(false);
   const sendMessage = async (text: string) => {
     const msg = text.trim();
-    if (!msg || loading) return;
+    if (!msg || loadingRef.current) return;
+    loadingRef.current = true;
     setInput("");
 
     let sessionId = activeId;
     if (!sessionId) sessionId = createSession("chat");
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", text: msg };
-    // Use ref to get latest sessions state (avoids stale closure)
     const current = sessionsRef.current;
     const session = current.find(s => s.id === sessionId) || { id: sessionId!, title: "New chat", messages: [], createdAt: Date.now(), type: "chat" as const };
     const updatedMessages = [...session.messages, userMsg];
@@ -280,19 +281,21 @@ export default function ChatPage() {
       const finalMessages = [...updatedMessages, { id: replyId, role: "assistant" as const, text: reply }];
       updateSession(sessionId!, { messages: finalMessages });
       if (user && sessionId.startsWith("local-")) {
-        syncCreateSession(sessionId!)
+        await syncCreateSession(sessionId!)
       } else if (user && !sessionId.startsWith("local-")) {
-        fetch(`/api/sessions/${sessionId}`, {
+        await fetch(`/api/sessions/${sessionId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: finalMessages, title }),
-    }).catch(() => { setSessionsLoading(false) })
+        }).catch(() => {})
       }
     } catch {
       const errMessages = [...updatedMessages, { id: (Date.now() + 1).toString(), role: "assistant" as const, text: "Sorry, I hit an error. Please try again." }];
       updateSession(sessionId!, { messages: errMessages });
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
     }
-    setLoading(false);
   };
 
   const selectSession = (id: string) => {

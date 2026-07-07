@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowRight, ChevronDown, Shield, Bot, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ThreatFeed } from "@/components/threat-feed";
+
+const ThreatMap = dynamic(() => import("@/components/threat-map").then(m => m.ThreatMap), { ssr: false });
 
 const FEATURES = [
   { icon: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z", title: "AI-Powered Learning", desc: "Ask any cybersecurity question and get clear, beginner-friendly explanations with analogies you'll actually understand." },
@@ -207,6 +211,14 @@ export default function Home() {
         </motion.div>
       </section>
 
+      <ThreatFeed />
+
+      <section className="bg-muted px-6 py-12">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-center text-2xl font-bold mb-8">Live Threat Map</h2>
+          <ThreatMap />
+        </div>
+      </section>
     </div>
   );
 }

@@ -9,8 +9,6 @@ interface User {
   name: string | null
   avatarUrl: string | null
   provider: string
-  isPro: boolean
-  proSince: string | null
 }
 
 interface AuthContextType {

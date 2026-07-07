@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Terminal, Shield, AlertTriangle, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ const CHALLENGES = [
     title: "SQL Injection (Login Bypass)",
     desc: "This login form is vulnerable to SQL injection. Bypass the password check.",
     code: `SELECT * FROM users\nWHERE username = 'admin'\n  AND password = '???';`,
-    hint: "Try: admin' -- or admin' OR '1'='1",
+    hint: "Try: admin' -- or ' OR '1'='1",
     solution: "admin' --",
   },
   {
@@ -30,7 +30,7 @@ const CHALLENGES = [
     desc: "Try accessing another user's invoice by changing the ID parameter.",
     code: `GET /api/invoice?id=101\n→ { user_id: 1, total: 249.99 }\n\nGET /api/invoice?id= ???`,
     hint: "Try: id=102, id=100, id=1",
-    solution: "/api/invoice?id=102",
+    solution: "id=102",
   },
 ];
 
@@ -39,38 +39,137 @@ export default function Sandbox() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState<string[]>([]);
   const [solved, setSolved] = useState<string[]>([]);
+  const [xssHtml, setXssHtml] = useState<string | null>(null);
+  const [sqlReady, setSqlReady] = useState(false);
+  const dbRef = useRef<any>(null);
+  const initRef = useRef(false);
 
   const challenge = CHALLENGES.find(c => c.id === active)!;
 
-  const run = () => {
+  useEffect(() => {
+    if (active === "sqli" && !initRef.current) {
+      initRef.current = true;
+      initSqlDatabase();
+    }
+  }, [active]);
+
+  const initSqlDatabase = async () => {
+    try {
+      setOutput(prev => [...prev, "⏳ Loading SQL.js (WebAssembly)..."]);
+
+      const sqlJsModule = await import("sql.js");
+      const SQL = await sqlJsModule.default({
+        locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+      });
+
+      const db = new SQL.Database();
+
+      db.run(`CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL,
+        email TEXT NOT NULL
+      )`);
+
+      db.run("INSERT INTO users VALUES (1, 'admin', 'admin', 'admin@cyberai.com')");
+      db.run("INSERT INTO users VALUES (2, 'john', 'password123', 'john@example.com')");
+      db.run("INSERT INTO users VALUES (3, 'jane', 'flowerpot', 'jane@example.com')");
+      db.run("INSERT INTO users VALUES (4, 'guest', 'guest', 'guest@cyberai.com')");
+
+      dbRef.current = db;
+      setSqlReady(true);
+      setOutput(prev => [
+        ...prev.filter(l => l !== "⏳ Loading SQL.js (WebAssembly)..."),
+        "✅ Database initialized. Users table ready with 4 users.",
+        "ℹ️ Try: admin' --  or  ' OR '1'='1",
+      ]);
+    } catch (err: any) {
+      setOutput(prev => [
+        ...prev.filter(l => l !== "⏳ Loading SQL.js (WebAssembly)..."),
+        `❌ Failed to load SQL.js: ${err.message || err}`,
+      ]);
+    }
+  };
+
+  const run = async () => {
     const lines = [...output, `$ ${input}`];
 
     if (active === "xss") {
-      if (input.includes("<script>") || input.includes("onerror=")) {
-        lines.push("🔥 XSS payload detected! The script executed in the victim's browser.");
+      setXssHtml(input);
+
+      const hasScript = /<script\b/i.test(input);
+      const hasHandler = /\bon\w+\s*=/i.test(input);
+      const hasJsUrl = /javascript\s*:/i.test(input);
+
+      if (hasScript || hasHandler || hasJsUrl) {
+        lines.push("🔥 XSS payload detected! Rendered in sandboxed iframe below.");
+        lines.push("⚡ The script executed in the victim's browser (sandboxed).");
         if (!solved.includes("xss")) setSolved([...solved, "xss"]);
       } else {
-        lines.push("Comment submitted. No XSS detected. Try a script tag.");
+        lines.push("📄 HTML rendered in sandboxed iframe below.");
+        lines.push("ℹ️ No executable script detected. Try adding a <script> tag.");
       }
     } else if (active === "sqli") {
-      if (input.includes("' --") || input.includes("' OR")) {
-        lines.push("✅ SQL injection successful! Logged in as admin without password.");
-        if (!solved.includes("sqli")) setSolved([...solved, "sqli"]);
-      } else {
-        lines.push("❌ Invalid password. Try manipulating the SQL query.");
+      if (!dbRef.current || !sqlReady) {
+        lines.push("⏳ Database is still initializing, please wait...");
+        setOutput(lines);
+        setInput("");
+        return;
+      }
+
+      const template = "SELECT * FROM users WHERE username = 'admin' AND password = '";
+      const fullQuery = template + input + "';";
+
+      lines.push(`📝 Executing: ${fullQuery}`);
+
+      try {
+        const results = dbRef.current.exec(fullQuery);
+
+        if (results.length > 0 && results[0].values.length > 0) {
+          const columns = results[0].columns;
+          const values = results[0].values;
+          lines.push(`📊 Columns: ${columns.join(", ")}`);
+          values.forEach((row: any[]) => {
+            lines.push(`   ${row.join(" | ")}`);
+          });
+
+          const isInjection = /('?\s*--|['"]\s*OR\b|1\s*=\s*1|#|'.*')/i.test(input);
+          if (isInjection) {
+            lines.push("✅ SQL injection successful! Logged in as admin without password.");
+            if (!solved.includes("sqli")) setSolved([...solved, "sqli"]);
+          }
+        } else {
+          lines.push("❌ Login failed. No matching user found. Try a different injection.");
+        }
+      } catch (err: any) {
+        lines.push(`❌ SQL Error: ${err.message}`);
       }
     } else if (active === "idor") {
-      const match = input.match(/id=(\d+)/);
+      const match = input.match(/(\d+)/);
       if (match) {
-        const id = parseInt(match[1]);
-        if (id >= 100 && id <= 103) {
-          lines.push(`📄 Invoice #${id}: User ID ${id - 100}, Total: $${(Math.random() * 500 + 50).toFixed(2)}`);
-          if (!solved.includes("idor")) setSolved([...solved, "idor"]);
-        } else {
-          lines.push("❌ Invoice not found. Try different IDs (100-103).");
+        const id = match[1];
+        try {
+          const res = await fetch(`/api/sandbox/invoice?id=${id}`);
+          const data = await res.json();
+
+          if (data.error) {
+            lines.push(`❌ ${data.error}`);
+          } else {
+            lines.push(`📄 Invoice #${data.id}`);
+            lines.push(`   User: ${data.user}`);
+            lines.push(`   Item: ${data.item}`);
+            lines.push(`   Total: $${data.total.toFixed(2)}`);
+
+            if (data.id !== 101) {
+              lines.push("🔓 IDOR vulnerability! You accessed another user's invoice.");
+              if (!solved.includes("idor")) setSolved([...solved, "idor"]);
+            }
+          }
+        } catch {
+          lines.push("❌ Network error. Is the API server running?");
         }
       } else {
-        lines.push("ℹ️ Enter a URL like: /api/invoice?id=102");
+        lines.push("ℹ️ Enter a URL like: /api/invoice?id=102  or just: 102");
       }
     }
 
@@ -92,13 +191,13 @@ export default function Sandbox() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Hack This Page</h1>
-              <p className="text-sm text-muted-foreground">Safe, educational vulnerability playground. No real exploits.</p>
+              <p className="text-sm text-muted-foreground">Real vulnerability playground. Exploits actually work here.</p>
             </div>
           </div>
 
           <div className="mb-6 flex gap-2 overflow-x-auto">
             {CHALLENGES.map(c => (
-              <button key={c.id} onClick={() => { setActive(c.id); setOutput([]); setInput(""); }}
+              <button key={c.id} onClick={() => { setActive(c.id); setOutput([]); setInput(""); setXssHtml(null); }}
                 className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap ${
                   active === c.id
                     ? "border-primary/50 bg-primary/10 text-primary"
@@ -116,7 +215,7 @@ export default function Sandbox() {
               <span className="text-xs font-medium text-muted-foreground">{challenge.title}</span>
               <div className="flex items-center gap-2">
                 {solved.includes(active) && <Badge variant="success">Solved</Badge>}
-                <Badge variant="warning" className="text-[10px]">Educational</Badge>
+                <Badge variant="warning" className="text-[10px]">Real Exploit</Badge>
               </div>
             </div>
             <div className="p-4">
@@ -142,12 +241,33 @@ export default function Sandbox() {
                   <span style={{ color: "#6b7280" }}>// Output will appear here. Try typing a payload and clicking Run.</span>
                 ) : (
                   output.map((line, i) => (
-                    <div key={i} className={`${line.startsWith("🔥") || line.startsWith("✅") ? "text-emerald-400" : line.startsWith("❌") ? "text-red-400" : line.startsWith("$") ? "text-[#e4e4e7]" : "text-[#6b7280]"}`}>
+                    <div key={i} className={`${
+                      line.startsWith("🔥") || line.startsWith("✅") || line.startsWith("⚡") || line.startsWith("🔓") ? "text-emerald-400"
+                        : line.startsWith("❌") ? "text-red-400"
+                        : line.startsWith("$") ? "text-[#e4e4e7]"
+                        : line.startsWith("⏳") ? "text-amber-400"
+                        : "text-[#6b7280]"
+                    }`}>
                       {line}
                     </div>
                   ))
                 )}
               </div>
+
+              {active === "xss" && xssHtml && (
+                <div className="mt-3">
+                  <div className="text-xs font-medium text-muted-foreground mb-1.5">
+                    🔒 Sandboxed Render ({'allow-scripts, allow-modals'}):
+                  </div>
+                  <iframe
+                    sandbox="allow-scripts allow-modals"
+                    srcDoc={xssHtml}
+                    title="XSS Sandbox"
+                    className="w-full rounded-lg border border-border bg-white"
+                    style={{ height: 120 }}
+                  />
+                </div>
+              )}
 
               <details className="mt-3">
                 <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">💡 Hint</summary>
@@ -160,8 +280,8 @@ export default function Sandbox() {
             <div className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
               <p className="text-xs text-muted-foreground">
-                This sandbox is fully simulated. No actual code execution occurs. All vulnerabilities are educational demonstrations.
-                Never test security exploits on real websites without explicit authorization.
+                This sandbox uses real exploits — XSS via a sandboxed iframe, real SQL injection via sql.js (in-browser SQLite),
+                and a live IDOR API endpoint. Never test security exploits on real websites without explicit authorization.
               </p>
             </div>
           </div>

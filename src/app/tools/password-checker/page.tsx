@@ -35,13 +35,15 @@ function generatePassword(): string {
   const digits = "0123456789";
   const special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
   const all = upper + lower + digits + special;
+  const arr = new Uint32Array(16);
+  crypto.getRandomValues(arr);
   let pw = "";
-  pw += upper[Math.floor(Math.random() * upper.length)];
-  pw += lower[Math.floor(Math.random() * lower.length)];
-  pw += digits[Math.floor(Math.random() * digits.length)];
-  pw += special[Math.floor(Math.random() * special.length)];
-  for (let i = 0; i < 12; i++) pw += all[Math.floor(Math.random() * all.length)];
-  return pw.split("").sort(() => Math.random() - 0.5).join("");
+  pw += upper[arr[0] % upper.length];
+  pw += lower[arr[1] % lower.length];
+  pw += digits[arr[2] % digits.length];
+  pw += special[arr[3] % special.length];
+  for (let i = 4; i < 16; i++) pw += all[arr[i] % all.length];
+  return pw;
 }
 
 export default function PasswordChecker() {
