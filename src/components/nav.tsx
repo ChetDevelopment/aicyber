@@ -20,7 +20,6 @@ const TOOL_LINKS = [
   { href: "/tools/password-checker", label: "Password Checker" },
   { href: "/challenges", label: "CTF" },
   { href: "/sandbox", label: "Sandbox" },
-  { href: "/dark-web", label: "Dark Web" },
 ];
 
 export function Nav() {

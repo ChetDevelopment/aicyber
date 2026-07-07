@@ -18,17 +18,17 @@ const CHALLENGES = [
     hint: "Use an online Base64 decoder or the browser console: atob('...')",
   },
   {
-    id: 2, title: "Caesar Cipher", difficulty: "Easy", points: 15,
-    description: "This message was encrypted with a Caesar cipher (shift 7). Decrypt it.",
-    challenge: "Lzahuk pz av mwpuk ovd av zva clhy!",
+    id: 2, title: "ROT13", difficulty: "Easy", points: 15,
+    description: "This message was encrypted with ROT13 (Caesar shift 13). Decrypt it.",
+    challenge: "frphevgl vf gb svtug ubj gb trg srne!",
     flag: "security is to fight how to get fear!",
-    hint: "Shift each letter back by 7 positions. A=Z, B=A...",
+    hint: "ROT13 is its own inverse — apply it twice to get back to the original.",
   },
   {
     id: 3, title: "Hex Decode", difficulty: "Easy", points: 10,
     description: "Convert this hex string to ASCII text.",
     challenge: "666c61677b6833785f346e645f737472316e67737d",
-    flag: "flag{hex_4nd_str1ngs}",
+    flag: "flag{h3x_4nd_str1ngs}",
     hint: "You can use parseInt('...', 16) and String.fromCharCode() in the console.",
   },
   {

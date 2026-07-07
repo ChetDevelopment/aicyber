@@ -61,11 +61,6 @@ const MODELS = [
   { id: "gemini-1.5-flash", label: "AIVerse Pro" },
   { id: "llama-3.1-8b-instant", label: "AIVerse Fast" },
   { id: "llama-3.3-70b-versatile", label: "AIVerse Balanced" },
-  { id: "meta-llama/llama-4-scout-17b-16e-instruct", label: "AIVerse Turbo" },
-  { id: "qwen/qwen3-32b", label: "AIVerse Ultra" },
-  { id: "openai/gpt-oss-20b", label: "AIVerse Reasoning" },
-  { id: "openai/gpt-oss-120b", label: "AIVerse Master" },
-  { id: "groq/compound", label: "AIVerse Agent" },
 ];
 
 export default function ChatPage() {

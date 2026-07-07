@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, ChevronDown, Shield, Bot, Lock, User, Skull } from "lucide-react";
-import { ThreatFeed } from "@/components/threat-feed";
+import { Sparkles, ArrowRight, ChevronDown, Shield, Bot, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,9 +16,7 @@ const FEATURES = [
 ];
 
 const PRICING = [
-  { name: "Free", price: "$0", period: "/forever", desc: "Everything you need to start learning cybersecurity.", features: ["Unlimited local AI queries", "30+ cybersecurity topics", "Multiple chat sessions", "Dark mode", "Works offline"], cta: "Start Learning", href: "/chat", popular: false },
-  { name: "Pro", price: "$9.99", period: "/month", desc: "Unlock the full CyberAI experience.", features: ["Everything in Free", "All AI models (Fast to Agent)", "🌑 Dark Web Research Lab", "Unlimited sessions", "Priority support", "No ads"], cta: "Subscribe — $9.99/mo", href: "/pricing", popular: true },
-  { name: "Enterprise", price: "Custom", period: "", desc: "For organizations and teams.", features: ["Everything in Pro", "SSO / SAML", "Audit logs", "Dedicated support", "On-premise deployment", "SLA guarantee"], cta: "Contact Us", href: "/contact", popular: false },
+  { name: "Free", price: "$0", period: "/forever", desc: "Everything included, forever.", features: ["5 AI models (Gemini + Llama)", "30+ cybersecurity topics", "Unlimited chat sessions", "CTF challenges + Sandbox", "Works offline", "No sign-up needed"], cta: "Start Learning", href: "/chat", popular: true },
 ];
 
 const FAQS = [
@@ -257,7 +254,6 @@ export default function Home() {
         </motion.div>
       </section>
 
-      <ThreatFeed />
     </div>
   );
 }
