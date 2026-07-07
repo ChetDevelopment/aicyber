@@ -12,6 +12,7 @@ import {
   Command, ChevronRight, ChevronLeft, Clock, Star,
   X, Trash2, Download, Upload, ChevronDown, Zap,
   Layers, FolderOpen, Link, Quote, HelpCircle, MessageCircle,
+  Library, Ear, PenTool, BookOpenCheck, Sigma,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,9 @@ const MODULES: Module[] = [
   { id: "bugs", icon: Bug, label: "Bug Diary", description: "Track & learn from bugs" },
   { id: "pair", icon: Brain, label: "AI Pair Prog", description: "Live coding assistant" },
   { id: "command", icon: Command, label: "Command Center", description: "Search everything" },
+  { id: "deepresearch", icon: Library, label: "Deep Research", description: "Advanced security & tech research" },
+  { id: "english", icon: Ear, label: "English Academy", description: "AI English teacher & coach" },
+  { id: "memory", icon: Brain, label: "AI Memory", description: "Persistent cross-chat memory engine" },
 ];
 
 const MODULE_PROMPTS: Record<string, string> = {
@@ -82,6 +86,60 @@ const MODULE_PROMPTS: Record<string, string> = {
   pair: `You are an AI pair programmer. Help the owner: explain existing code, suggest improvements, generate tests, refactor code, generate documentation, optimize performance, detect bugs, suggest architecture, explain errors, generate examples. Be concise and practical. Show code examples.`,
 
   command: `You are a smart search and command interface. Help the owner find anything across their workspace: notes, lessons, bugs, projects, conversations, research, commands, code snippets, documentation. Support natural language queries like "Find everything about Redis" or "Show bugs related to authentication". Also help execute commands and navigate the workspace.`,
+
+  deepresearch: `You are a senior security researcher and technical analyst. Generate comprehensive research reports on any topic in software engineering, cybersecurity, AI, or technology.
+
+Research modes available:
+- Academic Research: Formal analysis with citations, methodology, and peer-reviewed sources
+- Technical Research: Hands-on technical deep-dive with code examples, architecture, and implementation details
+- Cybersecurity Research: Defensive security analysis with OWASP, MITRE ATT&CK, CVE/CWE mapping
+- Vulnerability Research: CVE/CVSS analysis with exploit maturity, detection, and mitigation
+- Threat Intelligence: Threat actor profiling, campaign analysis, IOC tracking
+- AI/LLM Research: Model analysis, prompt injection, agent security, supply chain risks
+
+For every report include: executive summary, technical deep-dive, risk analysis, findings table, detection/mitigation strategies, and further reading with trusted sources.
+
+Research areas: OWASP Top 10, API Security, MITRE ATT&CK, CAPEC, CWE/CVE, Zero Trust, Cloud Security, K8s Security, AI/LLM Security, Supply Chain Security, Secure CI/CD, Threat Hunting, Malware Analysis (defensive), OSINT, Bug Bounty methodology.
+
+Always prioritize defensive cybersecurity, evidence-based findings, and responsible disclosure. Structure reports professionally with clear sections.`,
+
+  english: `You are a patient, encouraging English teacher. Create personalized learning paths based on CEFR levels (A1-C2) and the owner's profession in technology.
+
+Teaching approach:
+- Assess current level first, then create a structured roadmap
+- Teach grammar with clear explanations and tech-relevant examples
+- Build vocabulary categorized by: Daily Life, Business, Programming, Cybersecurity, AI, Cloud, DevOps
+- Practice speaking through conversation scenarios (interviews, meetings, technical discussions)
+- Coach writing: emails, documentation, GitHub README, LinkedIn, technical articles
+- Improve listening with adjustable-speed exercises and transcripts
+- Provide pronunciation guidance and fluency tips
+
+For each lesson: learning objectives, easy explanation, examples (including tech/programming examples), practice exercises, and AI feedback. Naturally integrate programming and cybersecurity vocabulary so learning English also improves professional communication.
+
+Track progress across sessions. Remember difficult words and repeated mistakes. Schedule spaced repetition. Adapt difficulty based on progress.`,
+
+  memory: `You are an AI with persistent cross-conversation memory. You remember the owner across ALL chats and never treat each conversation as a new session.
+
+Your memory system retains:
+- Learning progress (completed lessons, weak areas, topics covered)
+- Programming languages & frameworks being learned
+- Career goals and interview preparation status
+- Research topics and saved findings
+- Projects with architecture decisions, bugs, and roadmap
+- User preferences (explanation style, pace, interests)
+- English learning progress and CEFR level
+
+When the owner starts a new conversation:
+1. Automatically retrieve relevant memories from previous sessions
+2. Continue naturally without requiring the owner to repeat information
+3. Reference previous learnings, projects, and goals
+4. Track progress across sessions
+
+If asked "continue my Go learning" — automatically recall the current chapter, completed exercises, weak areas, and suggest the next lesson without asking the owner to repeat everything.
+
+If asked "review my project" — recall the project architecture, decisions, bugs, and roadmap from previous conversations.
+
+Never invent memories. If you don't have stored information, ask clarifying questions. Distinguish between temporary context and long-term memory. Prioritize the most recent and relevant memories.`,
 };
 
 const QUICK_ACTIONS: Record<string, { icon: any; label: string; input: string }[]> = {
@@ -98,6 +156,21 @@ const QUICK_ACTIONS: Record<string, { icon: any; label: string; input: string }[
   codereview: [
     { icon: Shield, label: "Security Review", input: "I'll share some code. Analyze it for security vulnerabilities." },
     { icon: Zap, label: "Performance Review", input: "Review this code for performance issues and suggest optimizations." },
+  ],
+  deepresearch: [
+    { icon: Shield, label: "CVE Research", input: "Research the latest critical CVEs and provide a detailed analysis with mitigation strategies." },
+    { icon: Globe, label: "Threat Intel", input: "Generate a threat intelligence report on current active malware campaigns and emerging attack techniques." },
+    { icon: BookMarked, label: "Tech Deep Dive", input: "Do a comprehensive technical research report on Zero Trust Architecture implementation." },
+  ],
+  english: [
+    { icon: Ear, label: "Level Assessment", input: "Assess my current English level and create a personalized learning roadmap." },
+    { icon: Briefcase, label: "Interview English", input: "Help me practice English for a cybersecurity job interview." },
+    { icon: PenTool, label: "Writing Coach", input: "Review this text for grammar and professional tone improvements." },
+  ],
+  memory: [
+    { icon: Brain, label: "View My Memory", input: "Show me what you remember about me, my projects, and my learning progress." },
+    { icon: BookMarked, label: "Continue Learning", input: "Continue my last learning session. Tell me where I left off and what to do next." },
+    { icon: TrendingUp, label: "My Progress Summary", input: "Give me a summary of my overall progress across all modules - learning, interview prep, research, and projects." },
   ],
 };
 
@@ -250,7 +323,26 @@ export default function OwnerPage() {
         }
       }
 
-      const systemPrompt = MODULE_PROMPTS[activeModule] || "You are the owner's personal AI assistant. Be helpful, knowledgeable, and direct.";
+      let systemPrompt = MODULE_PROMPTS[activeModule] || "You are the owner's personal AI assistant. Be helpful, knowledgeable, and direct.";
+
+      // Memory context: gather summaries from other modules for memory mode
+      if (activeModule === "memory") {
+        try {
+          const memoryContext: string[] = [];
+          const memoryModules = ["learning", "languages", "interview", "career", "research", "bugs", "english", "deepresearch", "codereview", "projects", "knowledge"];
+          for (const modId of memoryModules) {
+            const data = localStorage.getItem("cyberai_owner_messages_" + modId);
+            if (data) {
+              const msgs = JSON.parse(data);
+              const summary = msgs.slice(-6).map((m: any) => `[${m.role}]: ${m.text.slice(0, 200)}`).join("\n");
+              if (summary) memoryContext.push(`=== ${modId} module ===\n${summary}`);
+            }
+          }
+          if (memoryContext.length > 0) {
+            systemPrompt += `\n\n## MEMORY CONTEXT FROM PREVIOUS CONVERSATIONS\n${memoryContext.join("\n\n")}\n\nUse this context to provide continuity. The owner should never have to repeat information they've already shared.`;
+          }
+        } catch {}
+      }
 
       const res = await fetch("/api/chat", {
         method: "POST",
