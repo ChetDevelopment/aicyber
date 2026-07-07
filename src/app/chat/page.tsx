@@ -617,11 +617,6 @@ export default function ChatPage() {
                             <Clock className="h-3 w-3" /> {responseTime[msg.id]}ms
                           </span>
                         )}
-                        {modelUsed[msg.id] && (
-                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            {modelUsed[msg.id]}
-                          </span>
-                        )}
                         <button onClick={() => setThumbs(prev => ({ ...prev, [msg.id]: prev[msg.id] === "up" ? null : "up" }))}
                           className={`p-0.5 transition-all ${thumbs[msg.id] === "up" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
                         >
