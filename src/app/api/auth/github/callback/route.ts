@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { exchangeGithubCode, getGithubUser } from "@/lib/github-auth"
 import { prisma } from "@/lib/prisma"
+import { createSession } from "@/lib/auth"
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -35,21 +36,18 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const session = {
+    const token = await createSession({
       id: dbUser.id,
       email: dbUser.email,
       name: dbUser.name || dbUser.email.split("@")[0],
       avatarUrl: dbUser.avatarUrl || null,
       provider: "github",
-    }
+    })
 
-    const encoded = Buffer.from(JSON.stringify(session)).toString("base64")
     const target = `${origin}${next}`
-    const domain = origin.includes("localhost") ? "" : `; domain=.${new URL(origin).hostname.split(".").slice(-2).join(".")}`
-    const cookie = `cyberai_session=${encoded}; path=/; ${origin.startsWith("https") ? "secure; " : ""}samesite=lax${domain}; max-age=${60 * 60 * 24 * 7}`
 
     const html = `<!DOCTYPE html><html><body><script>
-      document.cookie = "${cookie}";
+      document.cookie = "cyberai_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${origin.startsWith("https") ? "; Secure" : ""}";
       window.location.href = "${target}";
     </script></body></html>`
 
@@ -57,7 +55,6 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "text/html",
-        "Set-Cookie": cookie,
       },
     })
   } catch (e) {
