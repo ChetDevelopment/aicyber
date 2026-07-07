@@ -5,7 +5,6 @@ import { AuthProvider } from "@/components/auth-provider";
 import { Nav } from "@/components/nav";
 import { FloatingChatWrapper } from "@/components/floating-chat-wrapper";
 import { PwaInstall } from "@/components/pwa-install";
-import { ThreatFeed } from "@/components/threat-feed";
 import { Footer } from "@/components/footer";
 import { VisitorTrack } from "@/components/visitor-track";
 import "./globals.css";
@@ -33,7 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthProvider>
             <Nav />
             <main>{children}</main>
-            <ThreatFeed />
             <FloatingChatWrapper />
             <PwaInstall />
             <VisitorTrack />

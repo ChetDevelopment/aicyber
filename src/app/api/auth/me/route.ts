@@ -7,19 +7,33 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = JSON.parse(Buffer.from(cookie.value, "base64").toString())
-    const user = await prisma.user.findUnique({
-      where: { id: data.id },
-      select: { id: true, email: true, name: true, avatarUrl: true, isPro: true, proSince: true },
-    })
-    if (!user) return NextResponse.json({ user: null })
+    if (!data.email) return NextResponse.json({ user: null })
+
+    // Try to get isPro from DB, but don't fail if DB is unavailable
+    let isPro = false
+    let proSince: string | null = null
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: data.id },
+        select: { isPro: true, proSince: true },
+      })
+      if (user) {
+        isPro = user.isPro
+        proSince = user.proSince?.toISOString() || null
+      }
+    } catch {
+      // DB unavailable — continue without pro status
+    }
+
     return NextResponse.json({
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
-        isPro: user.isPro,
-        proSince: user.proSince?.toISOString() || null,
+        id: data.id,
+        email: data.email,
+        name: data.name || data.email.split("@")[0],
+        avatarUrl: data.avatarUrl || null,
+        provider: data.provider || "local",
+        isPro,
+        proSince,
       },
     })
   } catch {

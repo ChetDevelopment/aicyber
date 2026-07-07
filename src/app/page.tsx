@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowRight, ChevronDown, Shield, Bot, Lock, User, Skull } from "lucide-react";
+import { ThreatFeed } from "@/components/threat-feed";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -276,6 +277,7 @@ export default function Home() {
         </motion.div>
       </section>
 
+      <ThreatFeed />
     </div>
   );
 }

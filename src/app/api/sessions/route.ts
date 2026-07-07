@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
     const records = await prisma.tutorSession.findMany({
       where: { userId: user.id },
       orderBy: { updatedAt: "desc" },
-      select: { id: true, title: true, type: true, projectId: true, updatedAt: true },
+      select: { id: true, title: true, type: true, projectId: true, messages: true, updatedAt: true },
     })
     return NextResponse.json({
-      sessions: records.map(r => ({ id: r.id, title: r.title, type: r.type, projectId: r.projectId, updatedAt: r.updatedAt.toISOString() })),
+      sessions: records.map(r => ({ id: r.id, title: r.title, type: r.type, projectId: r.projectId, messages: r.messages, updatedAt: r.updatedAt.toISOString() })),
     })
   } catch {
     return NextResponse.json({ sessions: [] })

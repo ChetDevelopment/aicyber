@@ -29,7 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me")
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      const res = await fetch("/api/auth/me", { signal: controller.signal })
+      clearTimeout(timeout)
       const data = await res.json()
       setUser(data.user || null)
     } catch {
