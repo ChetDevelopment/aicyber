@@ -78,7 +78,7 @@ export default function ChatPage() {
   const [persona, setPersona] = useState<string>("tutor");
   const [thumbs, setThumbs] = useState<Record<string, "up" | "down" | null>>({});
   const [responseTime, setResponseTime] = useState<Record<string, number>>({});
-  const [modelUsed, setModelUsed] = useState<Record<string, string>>({});
+
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { user, loading: authLoading } = useAuth();
@@ -277,7 +277,6 @@ export default function ChatPage() {
       const reply = data.reply || "I'm not sure how to answer that. Could you try asking in a different way?";
       const replyId = (Date.now() + 1).toString();
       setResponseTime(prev => ({ ...prev, [replyId]: elapsed }));
-      setModelUsed(prev => ({ ...prev, [replyId]: data.model || selectedModel }));
       const finalMessages = [...updatedMessages, { id: replyId, role: "assistant" as const, text: reply }];
       updateSession(sessionId!, { messages: finalMessages });
       if (user && sessionId.startsWith("local-")) {
