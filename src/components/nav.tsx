@@ -119,6 +119,9 @@ export function Nav() {
             )}
           {loading ? null : user ? (
             <div className="flex items-center gap-2">
+              <Link href="/owner" className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary hover:bg-primary/20 transition-all" title="Owner Dashboard">
+                <Sparkles className="h-3.5 w-3.5" />
+              </Link>
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                 {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
               </div>
