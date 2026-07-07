@@ -9,6 +9,7 @@ import {
   Shield, Wifi, Lock, Bug, Eye, Key, Globe, Mail,
   BookOpen, FolderKanban, FolderPlus, ChevronRight,
   ThumbsUp, ThumbsDown, Clock, Paperclip, Mic, Languages, X,
+  Pencil, Square,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -348,6 +349,47 @@ export default function ChatPage() {
   }, [recording]);
 
   const loadingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const deleteMessage = useCallback((msgId: string) => {
+    if (!activeId) return;
+    setSessions(prev => prev.map(s => {
+      if (s.id !== activeId) return s;
+      const idx = s.messages.findIndex(m => m.id === msgId);
+      if (idx === -1) return s;
+      return { ...s, messages: s.messages.slice(0, idx) };
+    }));
+  }, [activeId]);
+
+  const editMessage = useCallback((msgId: string) => {
+    if (!activeId) return;
+    const session = sessionsRef.current.find(s => s.id === activeId);
+    if (!session) return;
+    const idx = session.messages.findIndex(m => m.id === msgId);
+    if (idx === -1) return;
+    const msg = session.messages[idx];
+    if (msg.role !== "user") return;
+    setInput(msg.text);
+    setSessions(prev => prev.map(s => {
+      if (s.id !== activeId) return s;
+      return { ...s, messages: s.messages.slice(0, idx) };
+    }));
+  }, [activeId]);
+
+  const stopGeneration = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    if (typingRef.current) {
+      clearInterval(typingRef.current);
+      typingRef.current = null;
+    }
+    setTypingId(null);
+    setLoading(false);
+    loadingRef.current = false;
+  }, []);
+
   const sendMessage = async (text: string, imgs?: AttachedImage[]) => {
     const msg = text.trim();
     if ((!msg && (!imgs || imgs.length === 0)) || loadingRef.current) return;
@@ -369,6 +411,8 @@ export default function ChatPage() {
     setLoading(true);
 
     const startTime = performance.now();
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const history = updatedMessages.slice(0, -1).map(m => ({ role: m.role, text: m.text, images: m.images }));
       const body: any = { message: msg, history, model: selectedModel, persona };
@@ -377,6 +421,7 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
       const data = await res.json();
       const elapsed = Math.round(performance.now() - startTime);
@@ -395,12 +440,14 @@ export default function ChatPage() {
           body: JSON.stringify({ messages: finalMessages, title }),
         }).catch(() => {})
       }
-    } catch {
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
       const errMessages = [...updatedMessages, { id: (Date.now() + 1).toString(), role: "assistant" as const, text: "Sorry, I hit an error. Please try again." }];
       updateSession(sessionId!, { messages: errMessages });
     } finally {
       setLoading(false);
       loadingRef.current = false;
+      abortRef.current = null;
     }
   };
 
@@ -708,7 +755,7 @@ export default function ChatPage() {
                 const displayText = isTyping ? typingText : msg.text;
                 return (
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
-                  className={`flex gap-3 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`group flex gap-3 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.role === "assistant" && (
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary mt-0.5">
@@ -716,22 +763,43 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""}`}>
-                    {msg.images && msg.images.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2 justify-end">
-                        {msg.images.map(img => (
-                          <img key={img.id} src={`data:${img.mimeType};base64,${img.data}`} alt={img.name}
-                            className="w-24 h-24 rounded-lg object-cover border border-border"
-                          />
-                        ))}
+                    <div className="relative">
+                      {msg.images && msg.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                          {msg.images.map(img => (
+                            <img key={img.id} src={`data:${img.mimeType};base64,${img.data}`} alt={img.name}
+                              className="w-24 h-24 rounded-lg object-cover border border-border"
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {/* Hover actions */}
+                      <div className={`absolute -top-2 ${msg.role === "user" ? "-left-2" : "-right-2"} flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                        {msg.role === "user" && !isTyping && (
+                          <button onClick={() => editMessage(msg.id)}
+                            className="flex h-6 w-6 items-center justify-center rounded-md bg-background border border-border shadow-sm text-muted-foreground hover:text-foreground transition-all"
+                            title="Edit message"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                        )}
+                        {!isTyping && (
+                          <button onClick={() => deleteMessage(msg.id)}
+                            className="flex h-6 w-6 items-center justify-center rounded-md bg-background border border-border shadow-sm text-muted-foreground hover:text-destructive transition-all"
+                            title="Delete message"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
-                    )}
-                    <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-xl rounded-tr-sm"
-                        : "bg-secondary text-secondary-foreground border border-border rounded-xl rounded-tl-sm [&_strong]:font-semibold"
-                    }`}>
-                      {displayText}
-                      {isTyping && <span className="animate-pulse ml-0.5 text-primary">▊</span>}
+                      <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-xl rounded-tr-sm"
+                          : "bg-secondary text-secondary-foreground border border-border rounded-xl rounded-tl-sm [&_strong]:font-semibold"
+                      }`}>
+                        {displayText}
+                        {isTyping && <span className="animate-pulse ml-0.5 text-primary">▊</span>}
+                      </div>
                     </div>
                     {msg.role === "assistant" && !isTyping && (
                       <div className="mt-1 flex items-center gap-2 flex-wrap">
@@ -773,12 +841,17 @@ export default function ChatPage() {
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary">
                       <Sparkles className="h-4 w-4 text-primary-foreground" />
                     </div>
-                    <div className="rounded-xl rounded-tl-sm border border-border bg-secondary px-4 py-3">
+                    <div className="rounded-xl rounded-tl-sm border border-border bg-secondary px-3 py-2 flex items-center gap-3">
                       <span className="inline-flex gap-1.5">
                         <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
                         <span className="h-2 w-2 rounded-full bg-primary/70 animate-bounce" style={{ animationDelay: "150ms" }} />
                         <span className="h-2 w-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
                       </span>
+                      <button onClick={stopGeneration}
+                        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-md hover:bg-destructive/10"
+                      >
+                        <Square className="h-3 w-3" /> Stop
+                      </button>
                     </div>
                   </motion.div>
                 )}
