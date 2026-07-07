@@ -243,26 +243,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Dark Web CTA */}
-      <section className="px-6 py-20 sm:py-28 bg-gradient-to-br from-purple-900/20 via-background to-background">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mx-auto max-w-3xl text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-500/10">
-            <Skull className="h-8 w-8 text-purple-500" />
-          </div>
-          <h2 className="text-3xl font-bold sm:text-5xl">Dark Web Research Lab</h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-            Explore a simulated .onion marketplace. Learn how the dark web works — safely and legally.
-            Available exclusively with CyberAI Pro.
-          </p>
-          <Link href="/pricing">
-            <Button size="lg" className="mt-8 h-14 rounded-xl px-10 text-base bg-purple-600 hover:bg-purple-700 text-white">
-              Unlock with Pro — $9.99/mo
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-        </motion.div>
-      </section>
-
       {/* CTA */}
       <section className="bg-foreground px-6 py-20 sm:py-28 text-background">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mx-auto max-w-3xl text-center">

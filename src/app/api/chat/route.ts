@@ -5,10 +5,8 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 const GEMINI_MODELS = [
-  "gemini-2.5-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemini-3.5-flash",
   "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
   "gemini-1.5-flash",
 ];
 

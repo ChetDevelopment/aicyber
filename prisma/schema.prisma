@@ -18,6 +18,7 @@ model User {
   stripeCustomerId    String?
   stripeSubscriptionId String?
   subscriptionEnds    DateTime?
+  preferredModel      String   @default("gemini-2.0-flash")
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 

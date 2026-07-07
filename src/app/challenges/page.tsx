@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Flag, Lock, Check, X, ArrowLeft, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/components/auth-provider";
 import Link from "next/link";
 
 const CHALLENGES = [
@@ -56,23 +57,34 @@ const CHALLENGES = [
 const STORAGE_KEY = "cyberai_ctf_progress";
 
 export default function Challenges() {
+  const { user } = useAuth();
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [solved, setSolved] = useState<number[]>(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
-  });
+  const [solved, setSolved] = useState<number[]>([]);
   const [reveal, setReveal] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) return
+    fetch("/api/ctf").then(r => r.json()).then(d => {
+      if (d.solved) setSolved(d.solved)
+    }).catch(() => {})
+  }, [user]);
 
   const totalPoints = solved.reduce((sum, id) => sum + (CHALLENGES.find(c => c.id === id)?.points || 0), 0);
 
-  const checkFlag = (id: number) => {
+  const checkFlag = async (id: number) => {
     const challenge = CHALLENGES.find(c => c.id === id);
     if (!challenge) return;
     const answer = (answers[id] || "").trim().toLowerCase();
     if (answer === challenge.flag.toLowerCase()) {
       if (!solved.includes(id)) {
-        const next = [...solved, id];
-        setSolved(next);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        setSolved(prev => [...prev, id]);
+        if (user) {
+          await fetch("/api/ctf", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ challengeId: id }),
+          }).catch(() => {})
+        }
       }
     }
   };

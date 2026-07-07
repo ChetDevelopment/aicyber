@@ -24,13 +24,14 @@ export async function GET(request: NextRequest) {
       const dbUser = await Promise.race([
         prisma.user.findUnique({
           where: { id: data.id },
-          select: { isPro: true, proSince: true },
+          select: { isPro: true, proSince: true, preferredModel: true },
         }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
       ])
       if (dbUser) {
         userBase.isPro = dbUser.isPro
         userBase.proSince = dbUser.proSince?.toISOString() || null
+        ;(userBase as any).preferredModel = dbUser.preferredModel
       }
     } catch {
       console.warn("[AUTH] DB unavailable, returning basic user")

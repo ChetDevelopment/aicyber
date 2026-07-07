@@ -56,9 +56,9 @@ const SUGGESTIONS = [
 ];
 
 const MODELS = [
-  { id: "gemini-2.5-flash-lite", label: "AIVerse Flash" },
-  { id: "gemini-3.1-flash-lite", label: "AIVerse Lite" },
-  { id: "gemini-3.5-flash", label: "AIVerse Pro" },
+  { id: "gemini-2.0-flash", label: "AIVerse Flash" },
+  { id: "gemini-2.0-flash-lite", label: "AIVerse Lite" },
+  { id: "gemini-1.5-flash", label: "AIVerse Pro" },
   { id: "llama-3.1-8b-instant", label: "AIVerse Fast" },
   { id: "llama-3.3-70b-versatile", label: "AIVerse Balanced" },
   { id: "meta-llama/llama-4-scout-17b-16e-instruct", label: "AIVerse Turbo" },
@@ -68,10 +68,6 @@ const MODELS = [
   { id: "groq/compound", label: "AIVerse Agent" },
 ];
 
-const STORAGE_KEY = "cyberai_sessions";
-const PROJECTS_KEY = "cyberai_projects";
-const MODEL_KEY = "cyberai_model";
-
 export default function ChatPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -79,7 +75,7 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
   const [mounted, setMounted] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
@@ -87,6 +83,7 @@ export default function ChatPage() {
   const [persona, setPersona] = useState<string>("tutor");
   const [thumbs, setThumbs] = useState<Record<string, "up" | "down" | null>>({});
   const [responseTime, setResponseTime] = useState<Record<string, number>>({});
+  const [modelUsed, setModelUsed] = useState<Record<string, string>>({});
   const [isMobile, setIsMobile] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
@@ -101,55 +98,39 @@ export default function ChatPage() {
 
   useEffect(() => {
     setMounted(true);
-    const savedModel = localStorage.getItem(MODEL_KEY);
-    if (savedModel && MODELS.some(m => m.id === savedModel)) setSelectedModel(savedModel);
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        setSessions(saved);
-        const p = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-        setProjects(p);
-      } catch {}
-      return
+    if (user) {
+      fetch("/api/auth/preferred-model")
+        .then(r => r.json())
+        .then(d => { if (d.model && MODELS.some(m => m.id === d.model)) setSelectedModel(d.model); })
+        .catch(() => {})
     }
+    if (!user) return
     Promise.all([
       fetch("/api/sessions").then(r => r.json()),
       fetch("/api/projects").then(r => r.json()),
     ]).then(([sData, pData]) => {
       if (sData.sessions) {
-        const mapped: Session[] = sData.sessions.map((s: any) => ({
-          id: s.id,
-          title: s.title,
-          messages: s.messages || [],
-          createdAt: new Date(s.updatedAt).getTime(),
-          type: s.type || "chat",
+        setSessions(sData.sessions.map((s: any) => ({
+          id: s.id, title: s.title, messages: s.messages || [],
+          createdAt: new Date(s.updatedAt).getTime(), type: s.type || "chat",
           projectId: s.projectId || undefined,
-        }))
-        setSessions(mapped)
+        })))
       }
       if (pData.projects) {
         setProjects(pData.projects.map((p: any) => ({ id: p.id, name: p.name, createdAt: new Date(p.createdAt).getTime() })))
       }
-    }).catch(() => {
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        setSessions(saved);
-        const p = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-        setProjects(p);
-      } catch {}
-    })
+    }).catch(() => {})
   }, [user]);
 
   useEffect(() => {
-    if (!user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-      localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    if (user) {
+      fetch("/api/auth/preferred-model", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel }),
+      }).catch(() => {})
     }
-  }, [sessions, projects, user]);
-  useEffect(() => { localStorage.setItem(MODEL_KEY, selectedModel); }, [selectedModel]);
+  }, [selectedModel, user]);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
 
   useEffect(() => {
@@ -297,6 +278,7 @@ export default function ChatPage() {
       const reply = data.reply || "I'm not sure how to answer that. Could you try asking in a different way?";
       const replyId = (Date.now() + 1).toString();
       setResponseTime(prev => ({ ...prev, [replyId]: elapsed }));
+      setModelUsed(prev => ({ ...prev, [replyId]: data.model || selectedModel }));
       const finalMessages = [...updatedMessages, { id: replyId, role: "assistant" as const, text: reply }];
       updateSession(sessionId!, { messages: finalMessages });
       if (user && sessionId.startsWith("local-")) {
@@ -623,10 +605,15 @@ export default function ChatPage() {
                         : "bg-secondary text-secondary-foreground border border-border rounded-xl rounded-tl-sm [&_strong]:font-semibold"
                     }`}>{msg.text}</div>
                     {msg.role === "assistant" && (
-                      <div className="mt-1 flex items-center gap-2">
+                      <div className="mt-1 flex items-center gap-2 flex-wrap">
                         {responseTime[msg.id] && (
                           <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                             <Clock className="h-3 w-3" /> {responseTime[msg.id]}ms
+                          </span>
+                        )}
+                        {modelUsed[msg.id] && (
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {modelUsed[msg.id]}
                           </span>
                         )}
                         <button onClick={() => setThumbs(prev => ({ ...prev, [msg.id]: prev[msg.id] === "up" ? null : "up" }))}

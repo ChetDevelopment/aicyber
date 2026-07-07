@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Sparkles, User, ChevronDown, Shield, Key, Mail, Lock } from "lucide-react";
 
@@ -23,6 +23,10 @@ export function FloatingChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const chatEnd = useRef<HTMLDivElement>(null);
+  const savedModel = useMemo(() => {
+    if (typeof window === "undefined") return "gemini-2.0-flash";
+    try { return localStorage.getItem("cyberai_model") || "gemini-2.0-flash"; } catch { return "gemini-2.0-flash"; }
+  }, []);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -49,7 +53,7 @@ export function FloatingChat() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, history, model: "gemini-2.5-flash-lite" }),
+        body: JSON.stringify({ message: msg, history, model: savedModel }),
       });
       const data = await res.json();
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: "assistant", text: data.reply || "Could you rephrase that?" }]);
