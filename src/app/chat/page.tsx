@@ -512,26 +512,11 @@ export default function ChatPage() {
   }
 
   if (!user) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background p-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/20">
-            <Sparkles className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">CyberAI Tutor</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Sign in to continue your learning journey.</p>
-          <Link href="/login">
-            <Button size="lg" className="mt-8 h-12 rounded-xl px-8 w-full">
-              Sign in
-            </Button>
-          </Link>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary hover:underline">Sign up</Link>
-          </p>
-        </motion.div>
-      </div>
-    );
+    // Redirect to login if not authenticated
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    return null;
   }
 
   return (
