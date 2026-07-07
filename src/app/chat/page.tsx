@@ -189,25 +189,27 @@ export default function ChatPage() {
   const sessionsRef = useRef(sessions);
   sessionsRef.current = sessions;
 
-  const syncCreateSession = useCallback(async (sessionId: string) => {
+  const syncCreateSession = useCallback(async (sessionId: string, messages?: Message[], sessionTitle?: string) => {
     if (!user) return
     const session = sessionsRef.current.find(s => s.id === sessionId)
     if (!session) return
+    const msgs = messages || session.messages
+    const title = sessionTitle || session.title
     try {
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: session.title, type: session.type || "chat", projectId: session.projectId || null }),
+        body: JSON.stringify({ title, type: session.type || "chat", projectId: session.projectId || null }),
       })
       const data = await res.json()
       if (data.id) {
         setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, id: data.id } : s))
         setActiveId(data.id)
-        if (session.messages.length > 0) {
+        if (msgs.length > 0) {
           await fetch(`/api/sessions/${data.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: session.messages, title: session.title }),
+            body: JSON.stringify({ messages: msgs, title }),
           })
         }
       }
@@ -459,7 +461,7 @@ export default function ChatPage() {
       updateSession(sessionId!, { messages: finalMessages });
       startTypingAnimation(replyId, reply);
       if (user && sessionId.startsWith("local-")) {
-        await syncCreateSession(sessionId!)
+        await syncCreateSession(sessionId!, finalMessages, title)
       } else if (user && !sessionId.startsWith("local-")) {
         await fetch(`/api/sessions/${sessionId}`, {
           method: "PATCH",
