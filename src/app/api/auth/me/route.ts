@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const cookie = request.cookies.get("cyberai_session")
     if (!cookie?.value) return NextResponse.json({ user: null })
 
-    const data = await verifySession(cookie.value)
+    const data = verifySession(cookie.value)
     if (!data?.email) return NextResponse.json({ user: null })
 
     const userBase = {
@@ -22,19 +22,14 @@ export async function GET(request: NextRequest) {
 
     try {
       const dbUser = await Promise.race([
-        prisma.user.findUnique({
-          where: { id: data.id },
-          select: { isPro: true, proSince: true },
-        }),
+        prisma.user.findUnique({ where: { id: data.id }, select: { isPro: true, proSince: true } }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
       ])
       if (dbUser) {
         userBase.isPro = dbUser.isPro
         userBase.proSince = dbUser.proSince?.toISOString() || null
       }
-    } catch {
-      console.warn("[AUTH] DB unavailable, returning basic user")
-    }
+    } catch {}
 
     return NextResponse.json({ user: userBase })
   } catch (error) {

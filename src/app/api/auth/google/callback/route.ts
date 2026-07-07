@@ -21,45 +21,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=no_email`)
     }
 
-    // Create or update user in DB (same pattern as GitHub)
     const user = await prisma.user.upsert({
       where: { email: googleUser.email },
       update: { name: googleUser.name, avatarUrl: googleUser.picture || null },
-      create: {
-        id: googleUser.id,
-        email: googleUser.email,
-        name: googleUser.name || googleUser.email.split("@")[0],
-        avatarUrl: googleUser.picture || null,
-        provider: "google",
-      },
+      create: { id: googleUser.id, email: googleUser.email, name: googleUser.name || googleUser.email.split("@")[0], avatarUrl: googleUser.picture || null, provider: "google" },
     })
 
-    const token = await createSession({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      provider: "google",
-    })
-
+    const token = createSession({ id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, provider: "google" })
     const target = `${origin}${next}`
-    const isSecure = origin.startsWith("https")
-    const cookie = `cyberai_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${isSecure ? "; Secure" : ""}`
+    const cookie = `cyberai_session=${token}; path=/; ${origin.startsWith("https") ? "secure; " : ""}samesite=lax; max-age=${60 * 60 * 24 * 7}`
 
-    const html = `<!DOCTYPE html><html><body><script>
-      document.cookie = "${cookie}";
-      window.location.href = "${target}";
-    </script></body></html>`
+    const html = `<!DOCTYPE html><html><body><script>document.cookie="${cookie}";window.location.href="${target}";</script></body></html>`
 
-    return new Response(html, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/html",
-        "Set-Cookie": cookie,
-      },
-    })
+    return new Response(html, { status: 200, headers: { "Content-Type": "text/html", "Set-Cookie": cookie } })
   } catch (e) {
-    console.error("[GOOGLE_AUTH] Callback error:", e)
+    console.error("[GOOGLE_AUTH]", e)
     return NextResponse.redirect(`${origin}/login?error=google_auth_failed`)
   }
 }

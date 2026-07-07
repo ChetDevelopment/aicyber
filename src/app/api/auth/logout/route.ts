@@ -2,12 +2,6 @@ import { NextResponse } from "next/server"
 
 export async function POST() {
   const response = NextResponse.json({ success: true })
-  response.cookies.set("cyberai_session", "", {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 0,
-  })
+  response.cookies.set("cyberai_session", "", { path: "/", httpOnly: false, sameSite: "lax", maxAge: 0 })
   return response
 }
