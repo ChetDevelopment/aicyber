@@ -2,7 +2,7 @@ const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || ""
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || ""
 const SCOPES = ["openid", "email", "profile"].join(" ")
 
-export function getGoogleAuthUrl(origin: string) {
+export function getGoogleAuthUrl(origin: string, state?: string) {
   const redirectUri = `${origin}/api/auth/google/callback`
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -12,6 +12,7 @@ export function getGoogleAuthUrl(origin: string) {
     access_type: "offline",
     prompt: "consent",
   })
+  if (state) params.set("state", state)
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`
 }
 
@@ -20,18 +21,9 @@ export async function exchangeGoogleCode(code: string, origin: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      code,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-    }),
+    body: new URLSearchParams({ code, client_id: CLIENT_ID, client_secret: CLIENT_SECRET, redirect_uri: redirectUri, grant_type: "authorization_code" }),
   })
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Token exchange failed: ${err}`)
-  }
+  if (!res.ok) { const err = await res.text(); throw new Error(`Token exchange failed: ${err}`) }
   const tokens = await res.json()
   return tokens as { access_token: string; id_token?: string }
 }
@@ -41,10 +33,5 @@ export async function getGoogleUser(accessToken: string) {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   if (!res.ok) throw new Error("Failed to get user info")
-  return res.json() as Promise<{
-    id: string
-    email: string
-    name: string
-    picture: string
-  }>
+  return res.json() as Promise<{ id: string; email: string; name: string; picture: string }>
 }

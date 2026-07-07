@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
   const errorParam = searchParams.get("error")
-  const next = searchParams.get("next") ?? "/"
+  const state = searchParams.get("state") || "/"
 
   if (errorParam || !code) {
     return NextResponse.redirect(`${origin}/login?error=google_auth_failed`)
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     })
 
     const token = createSession({ id: user.id, email: user.email, name: user.name, avatarUrl: user.avatarUrl, provider: "google" })
-    const target = `${origin}${next}`
+    const target = `${origin}${state}`
     const cookie = `cyberai_session=${token}; path=/; ${origin.startsWith("https") ? "secure; " : ""}samesite=lax; max-age=${60 * 60 * 24 * 7}`
 
     const html = `<!DOCTYPE html><html><body><script>document.cookie="${cookie}";window.location.href="${target}";</script></body></html>`

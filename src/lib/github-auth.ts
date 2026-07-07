@@ -1,13 +1,14 @@
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID || ""
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || ""
 
-export function getGithubAuthUrl(origin: string) {
+export function getGithubAuthUrl(origin: string, state?: string) {
   const redirectUri = `${origin}/api/auth/github/callback`
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,
     scope: "read:user user:email",
   })
+  if (state) params.set("state", state)
   return `https://github.com/login/oauth/authorize?${params}`
 }
 
@@ -15,21 +16,10 @@ export async function exchangeGithubCode(code: string, origin: string) {
   const redirectUri = `${origin}/api/auth/github/callback`
   const res = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      code,
-      redirect_uri: redirectUri,
-    }),
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, code, redirect_uri: redirectUri }),
   })
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Token exchange failed: ${err}`)
-  }
+  if (!res.ok) { const err = await res.text(); throw new Error(`Token exchange failed: ${err}`) }
   const data = await res.json()
   if (data.error) throw new Error(`GitHub OAuth error: ${data.error}`)
   return data as { access_token: string }
@@ -40,13 +30,7 @@ export async function getGithubUser(accessToken: string) {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
   if (!res.ok) throw new Error("Failed to get user info")
-  const user = await res.json() as {
-    id: number
-    login: string
-    name: string | null
-    email: string | null
-    avatar_url: string
-  }
+  const user = await res.json() as { id: number; login: string; name: string | null; email: string | null; avatar_url: string }
 
   if (!user.email) {
     const emailsRes = await fetch("https://api.github.com/user/emails", {
@@ -59,10 +43,5 @@ export async function getGithubUser(accessToken: string) {
     }
   }
 
-  return {
-    id: String(user.id),
-    email: user.email || `${user.login}@github.com`,
-    name: user.name || user.login,
-    picture: user.avatar_url,
-  }
+  return { id: String(user.id), email: user.email || `${user.login}@github.com`, name: user.name || user.login, picture: user.avatar_url }
 }
