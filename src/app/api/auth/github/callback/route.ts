@@ -45,9 +45,11 @@ export async function GET(request: NextRequest) {
     })
 
     const target = `${origin}${next}`
+    const isSecure = origin.startsWith("https")
+    const cookie = `cyberai_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${isSecure ? "; Secure" : ""}`
 
     const html = `<!DOCTYPE html><html><body><script>
-      document.cookie = "cyberai_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${origin.startsWith("https") ? "; Secure" : ""}";
+      document.cookie = "${cookie}";
       window.location.href = "${target}";
     </script></body></html>`
 
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "text/html",
+        "Set-Cookie": cookie,
       },
     })
   } catch (e) {

@@ -43,16 +43,20 @@ export async function GET(request: NextRequest) {
     })
 
     const target = `${origin}${next}`
-    const domain = origin.includes("localhost") ? "" : `; Domain=.${new URL(origin).hostname.split(".").slice(-2).join(".")}`
+    const isSecure = origin.startsWith("https")
+    const cookie = `cyberai_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${isSecure ? "; Secure" : ""}`
 
     const html = `<!DOCTYPE html><html><body><script>
-      document.cookie = "cyberai_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${origin.startsWith("https") ? "; Secure" : ""}${domain}";
+      document.cookie = "${cookie}";
       window.location.href = "${target}";
     </script></body></html>`
 
     return new Response(html, {
       status: 200,
-      headers: { "Content-Type": "text/html" },
+      headers: {
+        "Content-Type": "text/html",
+        "Set-Cookie": cookie,
+      },
     })
   } catch (e) {
     console.error("[GOOGLE_AUTH] Callback error:", e)
