@@ -56,9 +56,11 @@ const SUGGESTIONS = [
 ];
 
 const MODELS = [
+  { id: "gemini-2.5-flash-lite", label: "AIVerse Flash" },
+  { id: "gemini-3.1-flash-lite", label: "AIVerse Lite" },
+  { id: "gemini-3.5-flash", label: "AIVerse Pro" },
   { id: "llama-3.1-8b-instant", label: "AIVerse Fast" },
   { id: "llama-3.3-70b-versatile", label: "AIVerse Balanced" },
-  { id: "gemini-3.5-flash", label: "AIVerse Pro" },
   { id: "meta-llama/llama-4-scout-17b-16e-instruct", label: "AIVerse Turbo" },
   { id: "qwen/qwen3-32b", label: "AIVerse Ultra" },
   { id: "openai/gpt-oss-20b", label: "AIVerse Reasoning" },
@@ -77,7 +79,7 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("llama-3.1-8b-instant");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite");
   const [mounted, setMounted] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
@@ -100,7 +102,7 @@ export default function ChatPage() {
   useEffect(() => {
     setMounted(true);
     const savedModel = localStorage.getItem(MODEL_KEY);
-    if (savedModel) setSelectedModel(savedModel);
+    if (savedModel && MODELS.some(m => m.id === savedModel)) setSelectedModel(savedModel);
   }, []);
 
   useEffect(() => {
