@@ -8,6 +8,7 @@ import { PwaInstall } from "@/components/pwa-install";
 import { Footer } from "@/components/footer";
 import { VisitorTrack } from "@/components/visitor-track";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { ConditionalFooter } from "@/components/conditional-footer";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ErrorBoundary><FloatingChatWrapper /></ErrorBoundary>
             <ErrorBoundary><PwaInstall /></ErrorBoundary>
             <ErrorBoundary><VisitorTrack /></ErrorBoundary>
-            <Footer />
+            <ConditionalFooter />
           </AuthProvider>
         </ThemeProvider>
         <script dangerouslySetInnerHTML={{

@@ -15,10 +15,6 @@ const FEATURES = [
   { icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z", title: "Instant Responses", desc: "Get answers in milliseconds from our local engine, or tap into cloud AI for deeper explanations." },
 ];
 
-const PRICING = [
-  { name: "Free", price: "$0", period: "/forever", desc: "Everything included, forever.", features: ["5 AI models (Gemini + Llama)", "30+ cybersecurity topics", "Unlimited chat sessions", "CTF challenges + Sandbox", "Works offline", "No sign-up needed"], cta: "Start Learning", href: "/chat", popular: true },
-];
-
 const FAQS = [
   { q: "What is CyberAI Tutor?", a: "CyberAI Tutor is a free AI-powered platform that teaches cybersecurity to beginners. You can ask questions, explore topics, and learn at your own pace — no experience required." },
   { q: "Do I need an API key to use it?", a: "No! The local AI engine works right out of the box with no API key. If you want cloud-powered responses, just add your free API key in the settings." },
@@ -145,49 +141,6 @@ export default function Home() {
               </div>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="bg-muted px-6 py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-16 text-center">
-            <Badge variant="secondary" className="mb-4">Pricing</Badge>
-            <h2 className="text-3xl font-bold sm:text-5xl">Completely free, forever</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">No hidden fees, no credit cards, no limits.</p>
-          </motion.div>
-          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
-            {PRICING.map((p, i) => (
-              <motion.div key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className={`relative rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md p-7 ${
-                  p.popular ? "border-primary/40 shadow-lg shadow-primary/5" : "border-border"
-                }`}
-              >
-                {p.popular && <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Most Popular</Badge>}
-                <h3 className="text-lg font-semibold text-card-foreground">{p.name}</h3>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-4xl font-bold text-card-foreground">{p.price}</span>
-                  {p.period && <span className="text-sm text-muted-foreground">{p.period}</span>}
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
-                <ul className="mt-6 space-y-3">
-                  {p.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <svg className="h-4 w-4 shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href={p.href}>
-                  <Button variant={p.popular ? "default" : "outline"} className="mt-8 w-full">{p.cta}</Button>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
