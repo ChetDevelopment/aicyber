@@ -87,6 +87,11 @@ export default function ChatPage() {
   const [persona, setPersona] = useState<string>("tutor");
   const [thumbs, setThumbs] = useState<Record<string, "up" | "down" | null>>({});
   const [responseTime, setResponseTime] = useState<Record<string, number>>({});
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const editRef = useRef<HTMLTextAreaElement>(null);
 
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -353,28 +358,52 @@ export default function ChatPage() {
 
   const deleteMessage = useCallback((msgId: string) => {
     if (!activeId) return;
+    if (confirmDelete !== msgId) {
+      setConfirmDelete(msgId);
+      setTimeout(() => setConfirmDelete(null), 3000);
+      return;
+    }
+    setConfirmDelete(null);
+    setMenuOpen(null);
     setSessions(prev => prev.map(s => {
       if (s.id !== activeId) return s;
       const idx = s.messages.findIndex(m => m.id === msgId);
       if (idx === -1) return s;
       return { ...s, messages: s.messages.slice(0, idx) };
     }));
-  }, [activeId]);
+  }, [activeId, confirmDelete]);
 
-  const editMessage = useCallback((msgId: string) => {
+  const startEdit = useCallback((msgId: string) => {
     if (!activeId) return;
     const session = sessionsRef.current.find(s => s.id === activeId);
     if (!session) return;
-    const idx = session.messages.findIndex(m => m.id === msgId);
-    if (idx === -1) return;
-    const msg = session.messages[idx];
-    if (msg.role !== "user") return;
-    setInput(msg.text);
+    const msg = session.messages.find(m => m.id === msgId);
+    if (!msg || msg.role !== "user") return;
+    setEditingId(msgId);
+    setEditText(msg.text);
+    setMenuOpen(null);
+    setTimeout(() => editRef.current?.focus(), 50);
+  }, [activeId]);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setEditText("");
+  }, []);
+
+  const submitEdit = useCallback(() => {
+    if (!activeId || !editingId) return;
+    const text = editText.trim();
+    if (!text) return;
     setSessions(prev => prev.map(s => {
       if (s.id !== activeId) return s;
+      const idx = s.messages.findIndex(m => m.id === editingId);
+      if (idx === -1) return s;
       return { ...s, messages: s.messages.slice(0, idx) };
     }));
-  }, [activeId]);
+    setEditingId(null);
+    setEditText("");
+    sendMessage(text);
+  }, [activeId, editingId, editText]);
 
   const stopGeneration = useCallback(() => {
     if (abortRef.current) {
@@ -753,9 +782,10 @@ export default function ChatPage() {
               {messages.map(msg => {
                 const isTyping = msg.role === "assistant" && typingId === msg.id;
                 const displayText = isTyping ? typingText : msg.text;
+                const isEditing = editingId === msg.id;
                 return (
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
-                  className={`group flex gap-3 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`group relative flex gap-3 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.role === "assistant" && (
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary mt-0.5">
@@ -763,45 +793,87 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""}`}>
-                    <div className="relative">
-                      {msg.images && msg.images.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2 justify-end">
-                          {msg.images.map(img => (
-                            <img key={img.id} src={`data:${img.mimeType};base64,${img.data}`} alt={img.name}
-                              className="w-24 h-24 rounded-lg object-cover border border-border"
-                            />
-                          ))}
+                    {msg.images && msg.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                        {msg.images.map(img => (
+                          <img key={img.id} src={`data:${img.mimeType};base64,${img.data}`} alt={img.name}
+                            className="w-24 h-24 rounded-lg object-cover border border-border"
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Edit mode: inline textarea */}
+                    {isEditing ? (
+                      <div className="rounded-xl border border-primary/50 bg-background overflow-hidden">
+                        <textarea ref={editRef} value={editText} onChange={e => setEditText(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitEdit(); }
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          className="w-full bg-transparent text-sm text-foreground p-3 resize-none focus:outline-none"
+                          rows={3}
+                        />
+                        <div className="flex items-center justify-end gap-2 px-3 py-2 border-t border-border bg-muted/30">
+                          <button onClick={cancelEdit}
+                            className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button onClick={submitEdit}
+                            className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-md hover:bg-primary/90 transition-colors"
+                          >
+                            Save & Send
+                          </button>
                         </div>
-                      )}
-                      {/* Hover actions */}
-                      <div className={`absolute -top-2 ${msg.role === "user" ? "-left-2" : "-right-2"} flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                        {msg.role === "user" && !isTyping && (
-                          <button onClick={() => editMessage(msg.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded-md bg-background border border-border shadow-sm text-muted-foreground hover:text-foreground transition-all"
-                            title="Edit message"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                        )}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground rounded-xl rounded-tr-sm"
+                            : "bg-secondary text-secondary-foreground border border-border rounded-xl rounded-tl-sm [&_strong]:font-semibold"
+                        }`}>
+                          {displayText}
+                          {isTyping && <span className="animate-pulse ml-0.5 text-primary">▊</span>}
+                        </div>
+
+                        {/* Three-dot menu */}
                         {!isTyping && (
-                          <button onClick={() => deleteMessage(msg.id)}
-                            className="flex h-6 w-6 items-center justify-center rounded-md bg-background border border-border shadow-sm text-muted-foreground hover:text-destructive transition-all"
-                            title="Delete message"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          <div className="absolute -top-2 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setMenuOpen(menuOpen === msg.id ? null : msg.id)}
+                              className="flex h-6 w-6 items-center justify-center rounded-md bg-background border border-border shadow-sm text-muted-foreground hover:text-foreground transition-all"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                            </button>
+                            {menuOpen === msg.id && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+                                <div className={`absolute z-50 ${msg.role === "user" ? "right-0" : "left-0"} top-7 w-36 rounded-lg border border-border bg-background shadow-xl py-1`}>
+                                  {msg.role === "user" && (
+                                    <button onClick={() => startEdit(msg.id)}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-accent transition-colors"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" /> Edit
+                                    </button>
+                                  )}
+                                  <button onClick={() => deleteMessage(msg.id)}
+                                    className={`flex w-full items-center gap-2 px-3 py-2 text-xs transition-colors ${
+                                      confirmDelete === msg.id ? "text-red-500 bg-red-500/10" : "text-foreground hover:bg-accent"
+                                    }`}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    {confirmDelete === msg.id ? "Confirm delete?" : "Delete"}
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
-                      <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground rounded-xl rounded-tr-sm"
-                          : "bg-secondary text-secondary-foreground border border-border rounded-xl rounded-tl-sm [&_strong]:font-semibold"
-                      }`}>
-                        {displayText}
-                        {isTyping && <span className="animate-pulse ml-0.5 text-primary">▊</span>}
-                      </div>
-                    </div>
-                    {msg.role === "assistant" && !isTyping && (
+                    )}
+
+                    {msg.role === "assistant" && !isTyping && !isEditing && (
                       <div className="mt-1 flex items-center gap-2 flex-wrap">
                         {responseTime[msg.id] && (
                           <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
@@ -909,11 +981,20 @@ export default function ChatPage() {
                 placeholder="Ask a cybersecurity question..." disabled={loading} rows={1}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-[140px] disabled:opacity-40 scrollbar-thin"
               />
-              <button onClick={() => sendMessage(input, pendingImages)} disabled={loading || (!input.trim() && pendingImages.length === 0)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-all active:scale-[0.97]"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+              {loading ? (
+                <button onClick={stopGeneration}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all active:scale-[0.97]"
+                  title="Stop generating"
+                >
+                  <Square className="h-4 w-4" />
+                </button>
+              ) : (
+                <button onClick={() => sendMessage(input, pendingImages)} disabled={!input.trim() && pendingImages.length === 0}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-all active:scale-[0.97]"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
