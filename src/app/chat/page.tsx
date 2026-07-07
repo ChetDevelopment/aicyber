@@ -8,16 +8,24 @@ import {
   Send, Sparkles, Sun, Moon, Menu, Plus, Trash2, User,
   Shield, Wifi, Lock, Bug, Eye, Key, Globe, Mail,
   BookOpen, FolderKanban, FolderPlus, ChevronRight,
+  ThumbsUp, ThumbsDown, Clock, Paperclip, Mic, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth-provider";
-import { ThumbsUp, ThumbsDown, Clock, Bot, MessageCircle, X } from "lucide-react";
+
+interface AttachedImage {
+  id: string;
+  data: string;
+  mimeType: string;
+  name: string;
+}
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   text: string;
+  images?: AttachedImage[];
 }
 
 interface Session {
@@ -81,6 +89,20 @@ export default function ChatPage() {
 
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Typing animation
+  const [typingId, setTypingId] = useState<string | null>(null);
+  const [typingText, setTypingText] = useState("");
+  const typingRef = useRef<number | null>(null);
+
+  // File upload
+  const [pendingImages, setPendingImages] = useState<AttachedImage[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Voice recording
+  const [recording, setRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
   const { user, loading: authLoading } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -149,6 +171,13 @@ export default function ChatPage() {
     check()
     window.addEventListener("resize", check)
     return () => window.removeEventListener("resize", check)
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (typingRef.current) clearInterval(typingRef.current);
+      recognitionRef.current?.stop();
+    };
   }, []);
 
   const sessionsRef = useRef(sessions);
@@ -246,32 +275,106 @@ export default function ChatPage() {
     });
   };
 
+  const startTypingAnimation = useCallback((msgId: string, fullText: string) => {
+    if (typingRef.current) clearInterval(typingRef.current);
+    setTypingId(msgId);
+    setTypingText("");
+
+    let idx = 0;
+    const chars = fullText.split("");
+    const speed = Math.max(8, Math.min(35, Math.round(2000 / chars.length)));
+
+    typingRef.current = window.setInterval(() => {
+      idx++;
+      if (idx >= chars.length) {
+        setTypingText(fullText);
+        setTypingId(null);
+        if (typingRef.current) clearInterval(typingRef.current);
+        typingRef.current = null;
+      } else {
+        setTypingText(chars.slice(0, idx).join(""));
+      }
+    }, speed);
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      if (file.size > 10 * 1024 * 1024) continue;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const data = (reader.result as string).split(",")[1];
+        setPendingImages(prev => [...prev, { id: crypto.randomUUID(), data, mimeType: file.type, name: file.name }]);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = "";
+  }, []);
+
+  const removeImage = useCallback((id: string) => {
+    setPendingImages(prev => prev.filter(i => i.id !== id));
+  }, []);
+
+  const toggleRecording = useCallback(() => {
+    if (recording) {
+      setRecording(false);
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult = (event: any) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInput(prev => prev + transcript);
+    };
+
+    recognition.onend = () => setRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setRecording(true);
+  }, [recording]);
+
   const loadingRef = useRef(false);
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text: string, imgs?: AttachedImage[]) => {
     const msg = text.trim();
-    if (!msg || loadingRef.current) return;
+    if ((!msg && (!imgs || imgs.length === 0)) || loadingRef.current) return;
+    const images = imgs || pendingImages;
     loadingRef.current = true;
     setInput("");
+    setPendingImages([]);
 
     let sessionId = activeId;
     if (!sessionId) sessionId = createSession("chat");
 
-    const userMsg: Message = { id: Date.now().toString(), role: "user", text: msg };
+    const userMsg: Message = { id: Date.now().toString(), role: "user", text: msg || "(image upload)", images: images.length > 0 ? images : undefined };
     const current = sessionsRef.current;
     const session = current.find(s => s.id === sessionId) || { id: sessionId!, title: "New chat", messages: [], createdAt: Date.now(), type: "chat" as const };
     const updatedMessages = [...session.messages, userMsg];
-    const title = session.messages.length === 0 ? msg.slice(0, 50) + (msg.length > 50 ? "..." : "") : session.title;
+    const title = session.messages.length === 0 ? (msg || "(image)").slice(0, 50) : session.title;
 
     updateSession(sessionId!, { messages: updatedMessages, title });
     setLoading(true);
 
     const startTime = performance.now();
     try {
-      const history = updatedMessages.slice(0, -1).map(m => ({ role: m.role, text: m.text }));
+      const history = updatedMessages.slice(0, -1).map(m => ({ role: m.role, text: m.text, images: m.images }));
+      const body: any = { message: msg, history, model: selectedModel, persona };
+      if (images.length > 0) body.images = images.map(i => ({ mimeType: i.mimeType, data: i.data }));
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, history, model: selectedModel, persona }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       const elapsed = Math.round(performance.now() - startTime);
@@ -280,6 +383,7 @@ export default function ChatPage() {
       setResponseTime(prev => ({ ...prev, [replyId]: elapsed }));
       const finalMessages = [...updatedMessages, { id: replyId, role: "assistant" as const, text: reply }];
       updateSession(sessionId!, { messages: finalMessages });
+      startTypingAnimation(replyId, reply);
       if (user && sessionId.startsWith("local-")) {
         await syncCreateSession(sessionId!)
       } else if (user && !sessionId.startsWith("local-")) {
@@ -597,7 +701,10 @@ export default function ChatPage() {
                   Research mode — exploring cybersecurity in depth
                 </div>
               )}
-              {messages.map(msg => (
+              {messages.map(msg => {
+                const isTyping = msg.role === "assistant" && typingId === msg.id;
+                const displayText = isTyping ? typingText : msg.text;
+                return (
                 <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
                   className={`flex gap-3 items-start ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
@@ -607,12 +714,24 @@ export default function ChatPage() {
                     </div>
                   )}
                   <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""}`}>
-                      <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                    {msg.images && msg.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                        {msg.images.map(img => (
+                          <img key={img.id} src={`data:${img.mimeType};base64,${img.data}`} alt={img.name}
+                            className="w-24 h-24 rounded-lg object-cover border border-border"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className={`px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                       msg.role === "user"
                         ? "bg-primary text-primary-foreground rounded-xl rounded-tr-sm"
                         : "bg-secondary text-secondary-foreground border border-border rounded-xl rounded-tl-sm [&_strong]:font-semibold"
-                    }`}>{msg.text}</div>
-                    {msg.role === "assistant" && (
+                    }`}>
+                      {displayText}
+                      {isTyping && <span className="animate-pulse ml-0.5 text-primary">▊</span>}
+                    </div>
+                    {msg.role === "assistant" && !isTyping && (
                       <div className="mt-1 flex items-center gap-2 flex-wrap">
                         {responseTime[msg.id] && (
                           <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
@@ -638,7 +757,7 @@ export default function ChatPage() {
                     </div>
                   )}
                 </motion.div>
-              ))}
+              )})}
 
               <AnimatePresence>
                 {loading && (
@@ -665,13 +784,44 @@ export default function ChatPage() {
         {/* Input */}
         <div className="border-t border-border bg-background/80 backdrop-blur-xl px-4 py-3 shrink-0">
           <div className="mx-auto max-w-3xl">
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+            {pendingImages.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {pendingImages.map(img => (
+                  <div key={img.id} className="relative group">
+                    <img src={`data:${img.mimeType};base64,${img.data}`} alt={img.name}
+                      className="w-16 h-16 rounded-lg object-cover border border-border"
+                    />
+                    <button onClick={() => removeImage(img.id)}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex items-end gap-2 rounded-xl border border-input bg-accent/30 px-3.5 py-2 focus-within:border-ring/50 focus-within:shadow-sm transition-all">
+              <button onClick={() => fileInputRef.current?.click()} disabled={loading}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all disabled:opacity-40"
+                title="Attach image"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              <button onClick={toggleRecording} disabled={loading}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all disabled:opacity-40 ${
+                  recording ? "bg-destructive text-destructive-foreground animate-pulse" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+                title={recording ? "Stop recording" : "Voice input"}
+              >
+                <Mic className="h-4 w-4" />
+              </button>
               <textarea ref={textRef} value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
                 placeholder="Ask a cybersecurity question..." disabled={loading} rows={1}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-[140px] disabled:opacity-40 scrollbar-thin"
               />
-              <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()}
+              <button onClick={() => sendMessage(input, pendingImages)} disabled={loading || (!input.trim() && pendingImages.length === 0)}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground transition-all active:scale-[0.97]"
               >
                 <Send className="h-4 w-4" />
