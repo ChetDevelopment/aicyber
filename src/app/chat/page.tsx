@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
@@ -77,7 +77,7 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite");
+  const [selectedModel, setSelectedModel] = useState("llama-3.1-8b-instant");
   const [mounted, setMounted] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
@@ -92,8 +92,10 @@ export default function ChatPage() {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
 
-  const activeSession = sessions.find(s => s.id === activeId) || null;
+  const activeSession = useMemo(() => sessions.find(s => s.id === activeId) || null, [sessions, activeId]);
   const messages = activeSession?.messages || [];
+  const chatSessions = useMemo(() => sessions.filter(s => s.type === "chat" && !s.projectId), [sessions]);
+  const researchSessions = useMemo(() => sessions.filter(s => s.type === "research"), [sessions]);
 
   useEffect(() => {
     setMounted(true);
@@ -119,7 +121,7 @@ export default function ChatPage() {
         const mapped: Session[] = sData.sessions.map((s: any) => ({
           id: s.id,
           title: s.title,
-          messages: [],
+          messages: s.messages || [],
           createdAt: new Date(s.updatedAt).getTime(),
           type: s.type || "chat",
           projectId: s.projectId || undefined,
@@ -146,7 +148,7 @@ export default function ChatPage() {
     }
   }, [sessions, projects, user]);
   useEffect(() => { localStorage.setItem(MODEL_KEY, selectedModel); }, [selectedModel]);
-  useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
 
   useEffect(() => {
     if (textRef.current) {
@@ -168,9 +170,12 @@ export default function ChatPage() {
     return () => window.removeEventListener("resize", check)
   }, []);
 
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+
   const syncCreateSession = useCallback(async (sessionId: string) => {
     if (!user) return
-    const session = sessions.find(s => s.id === sessionId)
+    const session = sessionsRef.current.find(s => s.id === sessionId)
     if (!session) return
     try {
       const res = await fetch("/api/sessions", {
@@ -191,7 +196,7 @@ export default function ChatPage() {
         }
       }
     } catch {}
-  }, [user, sessions]);
+  }, [user]);
 
   const createSession = useCallback((type: "chat" | "research" = "chat", projectId?: string) => {
     const id = "local-" + Date.now().toString();
@@ -332,9 +337,6 @@ export default function ChatPage() {
     if (topic) sendMessage(`Teach me about ${topic.label}`);
     if (isMobile) setSidebarOpen(false);
   };
-
-  const chatSessions = sessions.filter(s => s.type === "chat" && !s.projectId);
-  const researchSessions = sessions.filter(s => s.type === "research");
 
   if (!user && !authLoading) {
     return (
