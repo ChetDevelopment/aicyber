@@ -46,9 +46,11 @@ async function tryGemini(
   message: string,
   history: any[],
   preferredModel?: string,
-  images?: { mimeType: string; data: string }[]
+  images?: { mimeType: string; data: string }[],
+  systemPrompt?: string
 ): Promise<{ text: string; model: string } | null> {
   if (!GEMINI_API_KEY) return null;
+  const prompt = systemPrompt || SYSTEM_PROMPT;
 
   const models = preferredModel && GEMINI_MODELS.includes(preferredModel)
     ? [preferredModel, ...GEMINI_MODELS.filter(m => m !== preferredModel)]
@@ -80,7 +82,7 @@ async function tryGemini(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents,
-            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            systemInstruction: { parts: [{ text: prompt }] },
             generationConfig: { temperature: 0.7, topP: 0.95, maxOutputTokens: 2048 },
           }),
         }
@@ -100,9 +102,11 @@ async function tryGroq(
   message: string,
   history: any[],
   preferredModel?: string,
-  images?: { mimeType: string; data: string }[]
+  images?: { mimeType: string; data: string }[],
+  systemPrompt?: string
 ): Promise<{ text: string; model: string } | null> {
   if (!GROQ_API_KEY) return null;
+  const prompt = systemPrompt || SYSTEM_PROMPT;
 
   const models = preferredModel && GROQ_MODELS.includes(preferredModel)
     ? [preferredModel, ...GROQ_MODELS.filter(m => m !== preferredModel)]
@@ -110,7 +114,7 @@ async function tryGroq(
 
   for (const model of models) {
     try {
-      const groqMessages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
+      const groqMessages: any[] = [{ role: "system", content: prompt }];
       if (history && Array.isArray(history)) {
         for (const msg of history) {
           if (msg.role && msg.text) {
@@ -149,8 +153,8 @@ async function tryGroq(
 
 export async function POST(req: Request) {
   try {
-    const { message, history, model: preferredModel, images } = await req.json();
-    if (!message) {
+    const { message, history, model: preferredModel, images, systemPrompt } = await req.json();
+    if (!message && (!images || images.length === 0)) {
       return NextResponse.json({ reply: "Please ask a question!" }, { status: 400 });
     }
 
@@ -158,17 +162,17 @@ export async function POST(req: Request) {
     const isGroqModel = GROQ_MODELS.includes(preferredModel || "");
 
     if (isGroqModel) {
-      const groqReply = await tryGroq(message, history, preferredModel, images);
+      const groqReply = await tryGroq(message, history, preferredModel, images, systemPrompt);
       if (groqReply) return NextResponse.json({ reply: groqReply.text, model: groqReply.model, provider: "groq" });
       if (!hasImages) {
-        const geminiReply = await tryGemini(message, history);
+        const geminiReply = await tryGemini(message, history, undefined, undefined, systemPrompt);
         if (geminiReply) return NextResponse.json({ reply: geminiReply.text, model: geminiReply.model, provider: "gemini" });
       }
     } else {
-      const geminiReply = await tryGemini(message, history, preferredModel, images);
+      const geminiReply = await tryGemini(message, history, preferredModel, images, systemPrompt);
       if (geminiReply) return NextResponse.json({ reply: geminiReply.text, model: geminiReply.model, provider: "gemini" });
       if (!hasImages) {
-        const groqReply = await tryGroq(message, history);
+        const groqReply = await tryGroq(message, history, undefined, undefined, systemPrompt);
         if (groqReply) return NextResponse.json({ reply: groqReply.text, model: groqReply.model, provider: "groq" });
       }
     }
