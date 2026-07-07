@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, ChevronDown, Shield, Bot, Lock, User } from "lucide-react";
+import { Sparkles, ArrowRight, ChevronDown, Shield, Bot, Lock, User, Skull } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -16,9 +16,9 @@ const FEATURES = [
 ];
 
 const PRICING = [
-  { name: "Free", price: "$0", period: "/forever", desc: "Everything you need to start learning cybersecurity.", features: ["Unlimited local AI queries", "30+ cybersecurity topics", "Multiple chat sessions", "Dark mode", "Works offline"], cta: "Start Learning", popular: false },
-  { name: "Cloud Boost", price: "Free", period: "", desc: "AI-powered responses from our cloud models.", features: ["Everything in Free", "AIVerse Fast", "AIVerse Balanced", "AIVerse Pro", "Choose your model", "Smarter responses"], cta: "Add API Key", popular: true },
-  { name: "Enterprise", price: "Custom", period: "", desc: "For organizations and teams.", features: ["Everything in Boost", "API access", "Custom integrations", "Dedicated support", "On-premise deployment", "SLA guarantee"], cta: "Contact Us", popular: false },
+  { name: "Free", price: "$0", period: "/forever", desc: "Everything you need to start learning cybersecurity.", features: ["Unlimited local AI queries", "30+ cybersecurity topics", "Multiple chat sessions", "Dark mode", "Works offline"], cta: "Start Learning", href: "/chat", popular: false },
+  { name: "Pro", price: "$9.99", period: "/month", desc: "Unlock the full CyberAI experience.", features: ["Everything in Free", "All AI models (Fast to Agent)", "🌑 Dark Web Research Lab", "Unlimited sessions", "Priority support", "No ads"], cta: "Subscribe — $9.99/mo", href: "/pricing", popular: true },
+  { name: "Enterprise", price: "Custom", period: "", desc: "For organizations and teams.", features: ["Everything in Pro", "SSO / SAML", "Audit logs", "Dedicated support", "On-premise deployment", "SLA guarantee"], cta: "Contact Us", href: "/contact", popular: false },
 ];
 
 const FAQS = [
@@ -184,7 +184,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <Link href={p.popular ? "/chat" : p.name === "Enterprise" ? "#" : "/chat"}>
+                <Link href={p.href}>
                   <Button variant={p.popular ? "default" : "outline"} className="mt-8 w-full">{p.cta}</Button>
                 </Link>
               </motion.div>
@@ -240,6 +240,26 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Dark Web CTA */}
+      <section className="px-6 py-20 sm:py-28 bg-gradient-to-br from-purple-900/20 via-background to-background">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mx-auto max-w-3xl text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-500/10">
+            <Skull className="h-8 w-8 text-purple-500" />
+          </div>
+          <h2 className="text-3xl font-bold sm:text-5xl">Dark Web Research Lab</h2>
+          <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+            Explore a simulated .onion marketplace. Learn how the dark web works — safely and legally.
+            Available exclusively with CyberAI Pro.
+          </p>
+          <Link href="/pricing">
+            <Button size="lg" className="mt-8 h-14 rounded-xl px-10 text-base bg-purple-600 hover:bg-purple-700 text-white">
+              Unlock with Pro — $9.99/mo
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </motion.div>
       </section>
 
       {/* CTA */}

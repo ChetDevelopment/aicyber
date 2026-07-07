@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { exchangeGithubCode, getGithubUser } from "@/lib/github-auth"
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -19,11 +20,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=no_email`)
     }
 
+    const dbUser = await prisma.user.upsert({
+      where: { email: githubUser.email },
+      update: {
+        name: githubUser.name || githubUser.email.split("@")[0],
+        avatarUrl: githubUser.picture || null,
+      },
+      create: {
+        id: githubUser.id,
+        email: githubUser.email,
+        name: githubUser.name || githubUser.email.split("@")[0],
+        avatarUrl: githubUser.picture || null,
+        provider: "github",
+      },
+    })
+
     const session = {
-      id: githubUser.id,
-      email: githubUser.email,
-      name: githubUser.name || githubUser.email.split("@")[0],
-      avatarUrl: githubUser.picture || null,
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name || dbUser.email.split("@")[0],
+      avatarUrl: dbUser.avatarUrl || null,
       provider: "github",
     }
 

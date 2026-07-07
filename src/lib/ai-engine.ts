@@ -46,6 +46,8 @@ const topics: Record<string, string> = {
 
 const greetings = /^(hi|hello|hey|yo|bro|sup|good morning|good evening|good afternoon|howdy|what's up|wassup)/i;
 const thanks = /how are you|how('s| is) it going|thanks|thank you|appreciate it|good bot/i;
+const identityQ = /who (are you|made you|created you)|what are you|tell me about yourself|your (founder|creator|team)/i;
+const aiverseQ = /what is (aiverse|cyberai)|(aiverse|cyberai) (tutor|ecosystem)|aiverse\.app/i;
 
 const questionWords = ["what", "how", "why", "when", "where", "who", "which", "can", "does", "is", "are", "do", "explain", "tell", "define", "describe", "show", "teach", "help", "need"];
 
@@ -59,22 +61,32 @@ export function chatLocal(message: string): string {
     }
   }
 
+  // Identity questions
+  if (identityQ.test(msgLower)) {
+    return "I'm CyberAI Tutor! I'm an AI-powered cybersecurity learning platform created by my founder **Vichet Sat**, who grew up at **Passerelles Numeriques Cambodia**. I'm part of the **AIVerse ecosystem** (https://aiverses.app), and my mission is to make cybersecurity education free, accessible, and beginner-friendly for everyone. I teach through natural conversation — no experience needed! I am NOT ChatGPT, Gemini, or any other AI — I am exclusively CyberAI Tutor. What would you like to learn about today?";
+  }
+
+  // AIVerse questions
+  if (aiverseQ.test(msgLower)) {
+    return "**AIVerse** is the AI productivity ecosystem that created CyberAI Tutor. Founded by Vichet Sat, AIVerse helps people discover, learn, and master AI tools. CyberAI Tutor is AIVerse's cybersecurity education platform, hosted at https://cyber.aiverses.app. Together, we're making AI education accessible to everyone. Want to learn more about cybersecurity?";
+  }
+
   // Greetings
   if (greetings.test(msgLower)) {
-    return "Hey there! 👋 I'm your CyberAI Tutor. I can teach you about passwords, phishing, firewalls, encryption, social engineering, and tons of other cybersecurity topics. What would you like to learn about today?";
+    return "Hey there! I'm your CyberAI Tutor, created by Vichet Sat and the AIVerse team. I can teach you about passwords, phishing, firewalls, encryption, social engineering, and tons of other cybersecurity topics. What would you like to learn about today?";
   }
 
   // Thanks / how are you
   if (thanks.test(msgLower)) {
-    return "You're welcome! 😊 I'm here whenever you want to learn more about cybersecurity. Got another question? I cover everything from strong passwords to network security and AI safety.";
+    return "You're welcome! I'm CyberAI Tutor, built by AIVerse. I'm here whenever you want to learn more about cybersecurity. Got another question? I cover everything from strong passwords to network security and AI safety.";
   }
 
   // Question detection
   const isQuestion = questionWords.some(w => msgLower.startsWith(w) || msgLower.includes(` ${w} `));
   if (isQuestion) {
-    return `That's a great question! 🤔 I cover many cybersecurity topics including:\n\n**Web Security** — XSS, SQL injection, buffer overflows\n**Network Security** — Firewalls, VPNs, MAC flooding, ARP spoofing\n**Malware & Threats** — Ransomware, viruses, trojans, DoS attacks\n**Authentication** — Strong passwords, MFA, access control\n**Social Engineering** — Phishing, pretexting, tailgating\n**Advanced Topics** — Zero-days, penetration testing, incident response, SIEM, threat hunting\n**AI Security** — Prompt injection, jailbreaking\n\nCould you ask about one of these specific topics? For example: "What is phishing?" or "How do firewalls work?"`;
+    return `That's a great question! I'm CyberAI Tutor, your cybersecurity teacher. I cover many topics including:\n\n**Web Security** — XSS, SQL injection, buffer overflows\n**Network Security** — Firewalls, VPNs, MAC flooding, ARP spoofing\n**Malware & Threats** — Ransomware, viruses, trojans, DoS attacks\n**Authentication** — Strong passwords, MFA, access control\n**Social Engineering** — Phishing, pretexting, tailgating\n**Advanced Topics** — Zero-days, penetration testing, incident response, SIEM, threat hunting\n**AI Security** — Prompt injection, jailbreaking\n\nCould you ask about one of these specific topics? For example: "What is phishing?" or "How do firewalls work?"`;
   }
 
   // Default
-  return "I'm your CyberAI Tutor! 🛡️ I can teach you about cybersecurity in a simple, friendly way.\n\nTry asking me about:\n- **Passwords** — How to create and manage them\n- **Phishing** — How to spot fake emails\n- **Firewalls** — How they protect networks\n- **Encryption** — How secret codes keep data safe\n- **Ransomware** — How to protect yourself\n- **AI Safety** — Prompt injection and jailbreaking\n\nWhat interests you?";
+  return "I'm your CyberAI Tutor! I was created by Vichet Sat and the AIVerse team to teach cybersecurity in a simple, friendly way.\n\nTry asking me about:\n- **Passwords** — How to create and manage them\n- **Phishing** — How to spot fake emails\n- **Firewalls** — How they protect networks\n- **Encryption** — How secret codes keep data safe\n- **Ransomware** — How to protect yourself\n- **AI Safety** — Prompt injection and jailbreaking\n\nWhat interests you?";
 }

@@ -97,18 +97,54 @@ export default function ChatPage() {
 
   useEffect(() => {
     setMounted(true);
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      setSessions(saved);
-      const savedProjects = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
-      setProjects(savedProjects);
-      const savedModel = localStorage.getItem(MODEL_KEY);
-      if (savedModel) setSelectedModel(savedModel);
-    } catch {}
+    const savedModel = localStorage.getItem(MODEL_KEY);
+    if (savedModel) setSelectedModel(savedModel);
   }, []);
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)); }, [sessions]);
-  useEffect(() => { localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects)); }, [projects]);
+  useEffect(() => {
+    if (!user) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        setSessions(saved);
+        const p = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
+        setProjects(p);
+      } catch {}
+      return
+    }
+    Promise.all([
+      fetch("/api/sessions").then(r => r.json()),
+      fetch("/api/projects").then(r => r.json()),
+    ]).then(([sData, pData]) => {
+      if (sData.sessions) {
+        const mapped: Session[] = sData.sessions.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          messages: [],
+          createdAt: new Date(s.updatedAt).getTime(),
+          type: s.type || "chat",
+          projectId: s.projectId || undefined,
+        }))
+        setSessions(mapped)
+      }
+      if (pData.projects) {
+        setProjects(pData.projects.map((p: any) => ({ id: p.id, name: p.name, createdAt: new Date(p.createdAt).getTime() })))
+      }
+    }).catch(() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        setSessions(saved);
+        const p = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
+        setProjects(p);
+      } catch {}
+    })
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+      localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    }
+  }, [sessions, projects, user]);
   useEffect(() => { localStorage.setItem(MODEL_KEY, selectedModel); }, [selectedModel]);
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -132,8 +168,33 @@ export default function ChatPage() {
     return () => window.removeEventListener("resize", check)
   }, []);
 
+  const syncCreateSession = useCallback(async (sessionId: string) => {
+    if (!user) return
+    const session = sessions.find(s => s.id === sessionId)
+    if (!session) return
+    try {
+      const res = await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: session.title, type: session.type || "chat", projectId: session.projectId || null }),
+      })
+      const data = await res.json()
+      if (data.id) {
+        setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, id: data.id } : s))
+        setActiveId(data.id)
+        if (session.messages.length > 0) {
+          await fetch(`/api/sessions/${data.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: session.messages, title: session.title }),
+          })
+        }
+      }
+    } catch {}
+  }, [user, sessions]);
+
   const createSession = useCallback((type: "chat" | "research" = "chat", projectId?: string) => {
-    const id = Date.now().toString();
+    const id = "local-" + Date.now().toString();
     const label = type === "research" ? "New research" : "New chat";
     setSessions(prev => [{ id, title: label, messages: [], createdAt: Date.now(), type, projectId }, ...prev]);
     setActiveId(id);
@@ -151,12 +212,32 @@ export default function ChatPage() {
       if (activeId === id) setActiveId(filtered[0]?.id || null);
       return filtered;
     });
-  }, [activeId]);
+    if (user && !id.startsWith("local-")) {
+      fetch(`/api/sessions/${id}`, { method: "DELETE" }).catch(() => {});
+    }
+  }, [activeId, user]);
 
-  const createProject = () => {
+  const createProject = async () => {
     const name = newProjectName.trim();
     if (!name) return;
-    const id = Date.now().toString();
+    if (user) {
+      try {
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        })
+        const data = await res.json()
+        if (data.id) {
+          setProjects(prev => [...prev, { id: data.id, name, createdAt: Date.now() }]);
+          setNewProjectName("");
+          setShowNewProject(false);
+          setExpandedProjects(prev => new Set(prev).add(data.id));
+        }
+        return
+      } catch {}
+    }
+    const id = "local-" + Date.now().toString();
     setProjects(prev => [...prev, { id, name, createdAt: Date.now() }]);
     setNewProjectName("");
     setShowNewProject(false);
@@ -166,6 +247,9 @@ export default function ChatPage() {
   const deleteProject = (id: string) => {
     setProjects(prev => prev.filter(p => p.id !== id));
     setSessions(prev => prev.map(s => s.projectId === id ? { ...s, projectId: undefined } : s));
+    if (user && !id.startsWith("local-")) {
+      fetch(`/api/projects/${id}`, { method: "DELETE" }).catch(() => {});
+    }
   };
 
   const toggleProject = (id: string) => {
@@ -206,9 +290,20 @@ export default function ChatPage() {
       const reply = data.reply || "I'm not sure how to answer that. Could you try asking in a different way?";
       const replyId = (Date.now() + 1).toString();
       setResponseTime(prev => ({ ...prev, [replyId]: elapsed }));
-      updateSession(sessionId!, { messages: [...updatedMessages, { id: replyId, role: "assistant", text: reply }] });
+      const finalMessages = [...updatedMessages, { id: replyId, role: "assistant" as const, text: reply }];
+      updateSession(sessionId!, { messages: finalMessages });
+      if (user && sessionId.startsWith("local-")) {
+        syncCreateSession(sessionId!)
+      } else if (user && !sessionId.startsWith("local-")) {
+        fetch(`/api/sessions/${sessionId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: finalMessages, title }),
+        }).catch(() => {})
+      }
     } catch {
-      updateSession(sessionId!, { messages: [...updatedMessages, { id: (Date.now() + 1).toString(), role: "assistant", text: "Sorry, I hit an error. Please try again." }] });
+      const errMessages = [...updatedMessages, { id: (Date.now() + 1).toString(), role: "assistant" as const, text: "Sorry, I hit an error. Please try again." }];
+      updateSession(sessionId!, { messages: errMessages });
     }
     setLoading(false);
   };
@@ -217,6 +312,19 @@ export default function ChatPage() {
     setActiveId(id);
     setInput("");
     if (isMobile) setSidebarOpen(false);
+    if (user && !id.startsWith("local-")) {
+      const existing = sessions.find(s => s.id === id);
+      if (existing && existing.messages.length === 0) {
+        fetch(`/api/sessions/${id}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.messages) {
+              updateSession(id, { messages: data.messages as Message[] });
+            }
+          })
+          .catch(() => {})
+      }
+    }
   };
 
   const selectTopic = (topicId: string) => {
