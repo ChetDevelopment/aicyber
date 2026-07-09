@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
 
 const TOOL_LINKS = [
+  { href: "/jobs", label: "Jobs" },
   { href: "/tools/password-checker", label: "Password Checker" },
   { href: "/challenges", label: "CTF" },
   { href: "/sandbox", label: "Sandbox" },
